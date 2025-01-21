@@ -1,0 +1,15 @@
+{
+  "chunk_root_path": "/mnt/chunks",
+  "file_system_type": "ext4",
+  "mode": "production",
+  "auth_server": "http://localhost:8080",
+  "disk_auto_mount": true,
+  "disk_mount_point": "/mnt/disk",
+  "disk_uuid": "default-disk-uuid",
+  "disk_dev_file": "/dev/sda",
+  "use_cache_disk": true,
+  "cache_auto_mount": true,
+  "cache_mount_point": "/mnt/cache",
+  "cache_uuid": "default-cache-uuid",
+  "cache_dev_file": "/dev/sdb"
+}
