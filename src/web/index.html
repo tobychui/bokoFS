@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" class="is-white">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title i18n>
+        Admin Panel | BokoFS
+        // 管理介面 | BokoFS
+    </title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- Locales -->
+    <script src="./js/dom-i18n.min.js"></script>
+    <script src="./js/theme.js"></script>
+    <style>
+        #msgbox{
+            position: fixed;
+            bottom: 1em;
+            right: 1em;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    <div class="ts-content ">
+        <div class="ts-container">
+            <div style="float: right;">
+                <button class="ts-button is-start-icon" data-dropdown="languages">
+                    <span class="ts-icon is-language-icon"></span>
+                    <span id="currentLanguage">System</span>
+                </button>
+                <div class="ts-dropdown" id="languages">
+                    <button class="item" onclick="setCurrentLanguage('en');">English</button>
+                    <button class="item" onclick="setCurrentLanguage('zh');">中文（正體）</button>
+                </div>
+                <button class="ts-button is-icon" id="darkModeToggle">
+                    <span class="ts-icon is-moon-icon"></span>
+                </button>
+            </div>
+            <div class="ts-tab is-pilled">
+                <a href="" class="item" style="user-select: none;">
+                    <img id="sysicon" class="ts-image" style="height: 30px" src="img/logo.svg"></img>
+                </a>
+                <button href="#!" class="item is-active" data-tab="tab-status" i18n>
+                    Status
+                    // 系統狀態
+                </button>
+                <button href="#!" class="item" data-tab="tab-connections" i18n>
+                    Connections
+                    // 連接
+                </button>
+                <button href="#!" class="item" data-tab="tab-disks" i18n>
+                    Disks
+                    // 磁碟資訊
+                </button>
+                <button href="#!" class="item" data-tab="tab-raid" i18n>
+                    RAID
+                    // 磁碟陣列
+                </button>
+                <button href="#!" class="item" data-tab="tab-tools" i18n>
+                    Tools
+                    // 工具
+                </button>
+                <button href="#!" class="item" data-tab="tab-logs" i18n>
+                    Logs
+                    // 日誌
+                </button>
+                <button href="#!" class="item" data-tab="tab-settings" i18n>
+                    Settings
+                    // 設定
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="ts-divider"></div>
+    <div class="ts-content is-vertically-padded">
+        <div class="ts-container">
+            <div class="ts-content boko-panel-component" id="tab-status" component="status.html">Status</div>
+            <div class="ts-content boko-panel-component" id="tab-connections" component="connections.html">Connections</div>
+            <div class="ts-content boko-panel-component" id="tab-disks" component="disks.html">Disks</div>
+            <div class="ts-content boko-panel-component" id="tab-raid" component="raid.html">RAID</div>
+            <div class="ts-content boko-panel-component" id="tab-tools">Tools</div>
+            <div class="ts-content boko-panel-component" id="tab-logs">Logs</div>
+            <div class="ts-content boko-panel-component" id="tab-settings">Settings</div>
+        </div>  
+    </div>
+    <div class="ts-container">
+        <div class="ts-divider"></div>
+        <div class="ts-content">
+            <div class="ts-text">
+                BokoFS © tobychui 2024 - <span class="thisyear">2025</span>
+            </div>
+        </div>
+    </div>
+    <div id="msgbox" class="ts-snackbar has-start-padded-large has-end-padded-large">
+        <div class="content"></div>
+        <button class="close"></button>
+    </div>
+    <script>
+        var ajaxRequests = [];
+        $(".boko-panel-component").each(function(){
+            var component = $(this).attr("component");
+            if (component) {
+               $(this).load("./components/" + component, function(response, status, xhr) {
+                   if (status == "success") {
+                       console.log("Component loaded successfully:", component);
+                       if (typeof(relocale) != "undefined") {
+                           relocale();
+                       }
+                   } else {
+                       console.error("Failed to load component:", component, xhr.status, xhr.statusText);
+                   }
+               });
+            }
+        });
+
+        $(".thisyear").text(new Date().getFullYear());
+
+        function msgbox(msg, delay=3000){
+            $("#msgbox .content").text(msg);
+            $("#msgbox").stop().finish().fadeIn(200).delay(delay).fadeOut(200);
+        }
+
+        $("#msgbox .close").click(function(){
+            $("#msgbox").stop().finish().fadeOut(200);
+        });
+        $("#msgbox").hide();
+    </script>
+    <script src="./js/locale.js"></script>
+</body>
+</html>

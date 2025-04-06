@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="圖層_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="600px" height="200px" viewBox="0 0 600 200" enable-background="new 0 0 600 200" xml:space="preserve">
+<rect x="56.501" y="22.24" fill="#3E3A39" width="101.667" height="162"/>
+<circle fill="#3E3A39" cx="239.75" cy="132.99" r="51.25"/>
+<g display="none">
+	<defs>
+		<rect id="SVGID_1_" x="328.333" y="22.24" width="100.828" height="162.001"/>
+	</defs>
+	<clipPath id="SVGID_2_" display="inline">
+		<use xlink:href="#SVGID_1_"  overflow="visible"/>
+	</clipPath>
+	<path display="inline" clip-path="url(#SVGID_2_)" fill="#3E3A39" d="M430.593,184.239h-102.26v-162h102.26V184.239z
+		 M430.593,22.547l-102.26,80.848l102.26,80.847V22.547z"/>
+</g>
+<circle fill="#3E3A39" cx="495.743" cy="132.99" r="51.25"/>
+<polygon fill="#3E3A39" points="328.547,184.241 328.547,51.333 430.307,184.241 "/>
+<polygon fill="#3E3A39" points="328.547,22.24 328.547,155.148 429.879,22.24 "/>
+</svg>

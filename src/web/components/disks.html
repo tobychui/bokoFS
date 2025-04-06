@@ -1,0 +1,130 @@
+
+<div id="disk-list">
+    <div class="ts-box ts-content disk-info">
+        <span class="ts-icon is-spinning is-circle-notch-icon"></span>
+        <span class="has-start-padded-small" i18n>
+            Loading...
+        </span>
+    </div>
+</div>
+<div class="ts-wrap is-end-aligned">
+    <button id="refresh_disk_list_btn" class="ts-button is-start-icon has-top-spaced-large" >
+        <span class="ts-icon is-rotate-icon"></span>
+        <span i18n>
+            Refresh
+            // 重新整理
+    </button>
+</div>
+<script>
+    function humanFileSize(size) {
+        var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024));
+        return +((size / Math.pow(1024, i)).toFixed(1)) * 1 + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
+    }
+
+    $("#refresh_disk_list_btn").click(function(){
+        $("#disk-list").html("");
+        loadDiskInfo();
+        msgbox(i18nc('disk_info_refreshed'));
+    });
+
+    function loadDiskInfo(){
+        $.get("./api/info/list", function(data){
+            if (data) {
+                var disks = data;
+                var diskList = $("#disk-list");
+                diskList.empty();
+                for (var i = 0; i < disks.length; i++) {
+                    let disk = disks[i];
+                    let partitionDOM = "";
+                    let partitionTabs = "";
+
+                    //Render the partition tabs
+                    for (var j = 0; j < disk.partitions.length; j++) {
+                        let partition = disk.partitions[j];
+                        partitionTabs += `<a class="item ${j==0?"is-active":""}" data-tab="diskinfo_partition_${partition.name}">${partition.name}</a>`;
+                    }
+                    //Render the partition dom elements
+                    for (var j = 0; j < disk.partitions.length; j++) {
+                        let partition = disk.partitions[j];
+                        partitionDOM += `<div id="diskinfo_partition_${partition.name}" class="ts-box has-top-spaced-small">
+                                            <div class="ts-content">
+                                                <div class="ts-header">${partition.name}</div>
+                                                <div class="ts-grid mobile:is-stacked">
+                                                    <div class="column is-fluid">
+                                                        <div class="ts-text is-description has-top-spaced-small">
+                                                            UUID: ${partition.uuid} <br>
+                                                            PartUUID: ${partition.partuuid} <br>
+                                                            PartLabel: ${partition.partlabel} <br>
+                                                            Path: ${partition.path} <br>
+                                                            Block Size: ${partition.blocksize} <br>
+                                                            Block Type: ${partition.blocktype} <br>
+                                                            File System Type: ${partition.fstype} <br>
+                                                            Mount Point: ${partition.mountpoint==undefined?"":partition.mountpoint} <br>
+                                                        </div>
+                                                    </div>
+                                                    <div class="column is-6-wide">
+                                                        <div class="ts-wrap is-middle-aligned has-top-spaced-small">
+                                                            <div class="ts-gauge is-small is-circular">
+                                                                <div class="bar" style="--value: ${parseInt(partition.used / partition.size * 100)}">
+                                                                    <div class="text">${parseInt(partition.used / partition.size * 100)}%</div>
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div class="ts-text is-bold" i18n>
+                                                                    Used Space
+                                                                    // 已使用空間
+                                                                </div>
+                                                            ${humanFileSize(partition.used)} / ${humanFileSize(partition.size)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                            </div>
+                                        </div>`;
+                    }
+
+                    $(diskList).append(`<div class="ts-box ts-content has-top-spaced-small disk-info">
+                            <div class="ts-grid mobile:is-stacked">
+                                <div class="column is-fluid">
+                                    <div class="ts-item">
+                                        <div class="ts-header">${disk.model}</div>
+                                        <div class="ts-text is-description has-top-spaced-small">
+                                            ${disk.identifier} 
+                                        </div>
+                                        <span>/dev/${disk.name}</span>
+                                    </div>
+                                </div>
+                                <div class="column is-6-wide">
+                                    <div class="ts-wrap is-middle-aligned has-top-spaced-small">
+                                        <div class="ts-gauge is-small is-circular">
+                                            <div class="bar" style="--value: ${parseInt(disk.used / disk.size * 100)}">
+                                                <div class="text">${parseInt(disk.used / disk.size * 100)}%</div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="ts-text is-bold" i18n>
+                                                Total Space Used
+                                                // 總空間使用率
+                                            </div>
+                                        ${humanFileSize(disk.used)} / ${humanFileSize(disk.size)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="has-top-spaced-big">
+                                <div class="ts-tab is-segmented">
+                                    ${partitionTabs}
+                                </div>
+                                ${partitionDOM}
+                            </div>
+                    </div>`);
+                }
+                relocale();
+            } else {
+                console.error("Failed to load disk info: " + data.message);
+            }
+        });
+    }
+    loadDiskInfo();
+</script>

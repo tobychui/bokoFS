@@ -1,0 +1,537 @@
+<div class="ts-content is-rounded is-padded has-top-spaced-large" style="background: var(--ts-gray-800); color: var(--ts-gray-50)">
+    <div style="max-width: 480px">
+        <div class="ts-header is-huge is-heavy">
+            <div class="sysstatus_good">
+                <span class="ts-icon is-positive is-heading is-check-icon" style="color: var(--ts-positive-500);"></span>
+                <span i18n>Looks Good
+                    // 看起來不錯
+                </span>
+            </div>
+            <div class="sysstatus_attention" style="display:none;">
+                <span class="ts-icon is-warning is-heading is-exclamation-icon" style="color: var(--ts-warning-600);"></span>
+                <span i18n>Attention Required
+                    // 需要注意
+                </span>
+            </div>
+            <div class="sysstatus_bad" style="display:none;">
+                <span class="ts-icon is-negative is-heading is-xmark-icon" style="color: var(--ts-negative-500);"></span>
+                <span i18n>Critical Error
+                    // 嚴重錯誤
+                </span>
+            </div>
+            
+        </div>
+        <p class="sysstatus_good" i18n>This status shows you the general idea on how this storage node is doing in terms of disk health and other system conditions. See system analytic report for more details.
+            // 此狀態顯示了這個儲存節點在磁碟健康和其他系統條件方面的整體情況。 有關詳細資訊，請參閱系統分析報告。
+        </p>
+        <p class="sysstatus_attention" style="display:none;" i18n>Some disks are failing soon. Check the SMART status of the disks for more details.
+            // 某些磁碟的壽命即將結束。 請檢查磁碟的 SMART 狀態。
+        </p>
+        <p class="sysstatus_bad" style="display:none;" i18n>All disks are not healthy or failed. Replace the disks as soon as possible.
+            // 所有磁碟都不健康或已損壞。 請儘快更換磁碟。
+        </p>
+        <a href="#!" class="ts-button is-outlined" style="color: var(--ts-gray-50)" i18n>
+            Analytics Report
+            // 分析報告
+        </a>
+    </div>
+</div>
+<!-- Disk SMARTs -->
+<div class="has-top-spaced-large is-padded">
+    <div id="disk-smart-overview" class="ts-grid has-top-spaced-large is-relaxed is-3-columns is-stretched mobile:is-stacked">
+        <div class="column">
+            <div class="ts-content is-rounded is-padded">
+                <div class="ts-header is-truncated is-large is-heavy" i18n>
+                    SMART Status
+                    // 磁碟健康狀態
+                </div>
+                <p>
+                    <span class="ts-icon is-spinning is-circle-notch-icon"></span>
+                    <span i18n>Loading
+                        // 載入中
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>  
+
+<!-- Network IO -->
+<div class="ts-box has-top-spaced-large is-rounded is-padded ">
+    <div class="ts-content">
+        <div class="ts-header" i18n>Real-time Network IO
+            // 即時網路流量
+        </div>
+        <div id="networkActWrapper" class="has-top-spaced-large" style="position: relative;">
+            <canvas id="networkActivity"></canvas>
+        </div>
+        <div id="networkActivityPlaceHolder" class="ts-blankslate is-secondary" style="display:none;"> 
+            <div class="header" i18n>Graph Render Paused 
+                // 已暫停圖表運算
+            </div>
+            <div class="description" i18n>Graph resumes after resizing or refocus
+                // 當頁面調整大小或重新聚焦後，圖表將恢復運算
+            </div>
+        </div>
+    </div>
+    <div class="ts-content is-dense">
+        <i class="ts-icon is-end-spaced is-circle-down-icon" style="color: #1890ff;"></i>
+        <span i18n>Inbound Traffic
+            // 進站流量
+        </span>
+        <i class="ts-icon is-end-spaced has-start-spaced-large is-circle-up-icon" style="color: #52c41a;"></i>
+        <span i18n>Outbound Traffic
+            // 出站流量
+        </span>
+    
+    </div>
+</div>  
+
+<!-- Network Interface -->
+<div class="has-top-spaced-large is-padded">
+    <div class="ts-content">
+        <div class="ts-header is-truncated is-large is-heavy" i18n>Network Interfaces
+            // 網路介面
+        </div>
+        <p i18n>List of network interfaces and their IP addresses.
+            // 網路介面及其 IP 位址列表。
+        </p>
+    </div>
+    <table class="ts-table is-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th i18n>iface name
+                    // 介面名稱
+                </th>
+                <th i18n>IP Address
+                    // IP 位址
+                </th>
+            </tr>
+        </thead>
+        <tbody id="network-interface-list">
+            <tr>
+                <td colspan="3">
+                    <span class="ts-icon is-spinning is-circle-notch-icon"></span>
+                    <span i18n>Loading
+                        // 載入中
+                    </span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+
+    /* Network Interface */
+    function updateNetworkInterfaceTable() {
+        $.get("./api/info/iface", function(data) {
+            const tableBody = $("#network-interface-list");
+            tableBody.empty(); // Clear existing rows
+
+            data.forEach(iface => {
+                const ipAddresses = iface.IPs ? iface.IPs.join("<br>") : '<td class="is-empty"></td>';
+                const row = `
+                    <tr>
+                        <td>${iface.ID}</td>
+                        <td>${iface.Name}</td>
+                        ${iface.IPs ? "<td>" + ipAddresses + "</td>" : '<td class="is-empty"></td>'}
+                    </tr>
+                `;
+                tableBody.append(row);
+            });
+        });
+    }
+
+    // Call the function to populate the table initially
+    updateNetworkInterfaceTable();
+
+    /*  SMART DISK HEALTH STATUS */
+    // Function to format power-on hours into a human-readable format
+    function formatPowerOnHours(hours) {
+        const hoursInDay = 24;
+        const hoursInMonth = hoursInDay * 30; // Approximate month duration
+        const hoursInYear = hoursInDay * 365; // Approximate year duration
+
+        if (hours >= hoursInYear) {
+            return [(hours / hoursInYear).toFixed(1),`
+                years
+                // 年
+            `];
+        } else if (hours >= hoursInMonth) {
+            return [(hours / hoursInMonth).toFixed(1), `
+                months
+                // 個月
+            `];
+        } else if (hours >= hoursInDay) {
+            return [(hours / hoursInDay).toFixed(1), `
+                days
+                // 天
+            `];
+        } else {
+            return [hours.toFixed(1), `
+                hours
+                // 個小時
+            `];
+        }
+    }
+
+    // Function to format power-on hours into a human-readable format
+    function evaluateDriveHealth(info) {
+        if (!info) return 'unknown';
+
+        // Shortcut for IsHealthy flag from backend
+        if (!info.IsHealthy) return 'not_healthy';
+
+        // Thresholds based on SMART data experience
+        const thresholds = {
+            reallocated: 10,         // more than 10 sectors or blocks is a red flag
+            pending: 1,              // any pending sectors is worrying
+            uncorrectable: 1,        // same
+            udmaCrc: 10,             // interface problems
+            powerCycleHigh: 1000,    // maybe indicates hardware or power issues
+            wearLevel: 1000,         // beyond this, flash wear is a concern
+        };
+
+        let issues = 0;
+
+        if (info.ReallocatedSectors > thresholds.reallocated ||
+            info.ReallocateNANDBlocks > thresholds.reallocated) {
+            // Reallocated sectors or blocks
+            if (info.ReallocatedSectors > thresholds.reallocated * 3) {
+                return 'not_healthy';
+            }
+            issues++;
+            
+        }
+
+        if (info.PendingSectors >= thresholds.pending) issues++;
+        if (info.UncorrectableErrors >= thresholds.uncorrectable) issues++;
+        if (info.UDMACRCErrors >= thresholds.udmaCrc) issues++;
+
+        if (info.WearLevelingCount >= thresholds.wearLevel) issues++;
+
+        // SSDs may silently degrade with increasing wear even if no reallocation yet
+        if (info.IsSSD && info.WearLevelingCount > 0 && info.WearLevelingCount < 100) {
+            return 'attention';
+        }
+
+        if (issues === 0) {
+            return 'healthy';
+        } else if (issues === 1) {
+            return 'attention';
+        } else {
+            return 'not_healthy';
+        }
+    }
+
+    function getOverallSystemHealth(){
+
+    }
+
+
+    function initDiskSmartHealthOverview(){
+        $.get("./api/smart/health/all", function(data){
+            $("#disk-smart-overview").html("");
+            let good_count = 0;
+            let attention_count = 0;
+            let bad_count = 0;
+            for (var i = 0; i < data.length; i++){
+                let disk = data[i];
+                let healthState = evaluateDriveHealth(disk);
+                let iconClass = ``;
+                let iconColor = ``;
+                let tsBoxExtraCss = ``;
+                if (healthState == "healthy"){
+                    iconClass = "ts-icon is-positive is-heading is-circle-check-icon";
+                    iconColor = "var(--ts-positive-500)";
+                    good_count++;
+                }else if (healthState == "attention"){
+                    iconClass = "ts-icon is-warning is-heading is-circle-exclamation-icon";
+                    iconColor = "var(--ts-warning-500)";
+                    attention_count++;
+                }else if (healthState == "not_healthy"){
+                    iconClass = "ts-icon is-danger is-heading is-circle-xmark-icon";
+                    iconColor = "var(--ts-gray-300)";
+                    tsBoxExtraCss = `background-color: var(--ts-negative-400);`;
+                    bad_count++;
+                }else{
+                    iconClass = "ts-icon is-heading is-circle-question-icon";
+                    iconColor = "var(--ts-gray-500)";
+                }
+
+                let poweronDuration = formatPowerOnHours(disk.PowerOnHours);
+                $("#disk-smart-overview").append(`<div class="column">
+                    <div class="ts-box ts-content is-rounded is-padded" style="${tsBoxExtraCss}">
+                        <div class="ts-header is-truncated is-heavy">
+                            ${disk.DeviceModel}
+                        </div>
+                        <div class="ts-text has-top-spaced-small">
+                            <span class="ts-badge">/dev/${disk.DeviceName}</span> 
+                            <span class="ts-badge">${disk.SerialNumber}</span> 
+                        </div>
+                        <div class="ts-grid is-evenly-divided has-top-spaced-large">
+                            <div class="column">
+                                <div class="ts-text is-label" i18n>
+                                    Power-on Time
+                                    // 運行時間
+                                </div>
+                                <div class="ts-statistic">
+                                    <div class="value">${poweronDuration[0]}</div>
+                                    <div class="unit" i18n>${poweronDuration[1]}</div>
+                                </div>
+                            </div>
+                            <div class="column">
+                                <div class="ts-text is-label" i18n>Power Cycles
+                                    // 開機次數
+                                </div>
+                                <div class="ts-statistic">
+                                    <div class="value">${disk.PowerCycleCount}</div>
+                                    <div class="unit" i18n>
+                                        // 次</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="symbol">
+                            <span style="color: ${iconColor}; opacity: 0.4; z-index: 0;" class="${iconClass}"></span>
+                        </div>
+                    </div>
+                </div>`);
+            }
+            if (data.length == 0){
+                $("#disk-smart-overview").append(`<div class="column">
+                    <div class="ts-box ts-content is-rounded is-padded">
+                        <div class="ts-text" i18n>
+                            No SMART data available
+                            // 沒有可用的磁碟健康資料
+                        </div>
+                         <div class="symbol">
+                            <span style="color: var(--ts-positive-400); opacity: 0.4; z-index: 0;" class="ts-icon is-circle-check-icon"></span>
+                        </div>
+                    </div>
+                </div>`);
+            }
+
+            // Update the overall system health status
+            if (bad_count == data.length || bad_count + attention_count == data.length){
+                //All disks are bad
+                $(".sysstatus_bad").show();
+                $(".sysstatus_attention").hide();
+                $(".sysstatus_good").hide();
+            }else if (bad_count > 0){
+                $(".sysstatus_bad").hide();
+                $(".sysstatus_attention").show();
+                $(".sysstatus_good").hide();
+            }else{
+                //All or some disks are good but should not be effecting the system
+                $(".sysstatus_bad").hide();
+                $(".sysstatus_attention").hide();
+                $(".sysstatus_good").show();
+            }
+            relocale();
+        });
+    }
+
+    $(document).ready(function(){
+        initDiskSmartHealthOverview();
+    });
+   
+</script>
+
+<!-- Network IO Chart -->
+<script src="./js/chart.js"></script>
+<script>
+    /*
+        Render Network Activity Graph
+    */
+
+    let rxValues = [];
+    let txValues = [];
+    let dataCount = 300;
+    let timestamps = [];
+
+    for(var i = 0; i < dataCount; i++){
+        timestamps.push(new Date(Date.now() + i * 1000).toLocaleString().replace(',', ''));
+    }
+
+    function fetchData() {
+        $.ajax({
+            url: './api/info/netstat?array=true',
+            success: function(data){
+                if (rxValues.length == 0){
+                    rxValues.push(...data.Rx);
+                }else{
+                    rxValues.push(data.Rx[dataCount-1]);
+                    rxValues.shift();
+                }
+
+                if (txValues.length == 0){
+                    txValues.push(...data.Tx);
+                }else{
+                    txValues.push(data.Tx[dataCount-1]);
+                    txValues.shift();
+                }
+                
+                timestamps.push(new Date(Date.now()).toLocaleString().replace(',', ''));
+                timestamps.shift();
+                updateChart();
+            }
+        })
+    }
+
+    function formatBandwidth(bps) {
+        const KBPS = 1000;
+        const MBPS = 1000 * KBPS;
+        const GBPS = 1000 * MBPS;
+
+        if (bps >= GBPS) {
+            return (bps / GBPS).toFixed(1) + " Gbps";
+        } else if (bps >= MBPS) {
+            return (bps / MBPS).toFixed(1) + " Mbps";
+        } else if (bps >= KBPS) {
+            return (bps / KBPS).toFixed(1) + " Kbps";
+        } else {
+            return bps.toFixed(1) + " bps";
+        }
+    }
+
+    function changeScaleTextColor(color){
+        networkStatisticChart.options.scales.y.ticks.color = color;
+        networkStatisticChart.update();
+    }
+
+    var networkStatisticChart;
+    function initChart(){
+        $.get("./api/info/netstat", function(data){
+        networkStatisticChart = new Chart(
+                document.getElementById('networkActivity'),
+                {
+                    type: 'line',
+                    responsive: true,
+                    resizeDelay: 300,
+                    options: {
+                        animation: false,
+                        maintainAspectRatio: false,
+                        bezierCurve: true,
+                        tooltips: {enabled: false},
+                        hover: {mode: null},
+                        //stepped: 'middle',
+                        plugins: {
+                            legend: {
+                                display: false,
+                                position: "right",
+                            },
+                            title: {
+                                display: false,
+                                text: 'Network Statistic'
+                            },
+                        },
+                        scales: {
+                            x: {
+                                display: false,
+                                },
+                            y: {
+                                display: true,
+                                scaleLabel: {
+                                    display: true,
+                                    labelString: 'Value'
+                                },
+                                ticks: {
+                                    stepSize: 10000000,
+                                    callback: function(label, index, labels) {
+                                        return formatBandwidth(parseInt(label));
+                                    },
+                                    color: $("html").hasClass("is-dark") ? "#ffffff" : "#000000",
+                                },
+                                gridLines: {
+                                    display: true
+                                }
+                            }
+                        }
+                    },
+                    data: {
+                        labels: timestamps,
+                        datasets: [
+                            {
+                                label: 'In (bps)',
+                                data: rxValues,
+                                borderColor: "#1890ff",
+                                borderWidth: 1,
+                                backgroundColor: '#1890ff',
+                                fill: true,
+                                pointStyle: false,
+                            },
+                            {
+                                label: 'Out (bps)',
+                                data: txValues,
+                                borderColor: '#52c41a',
+                                borderWidth: 1,
+                                backgroundColor: '#52c41a',
+                                fill: true,
+                                pointStyle: false,
+                            }
+                        ]
+                    }
+                }
+            );
+        });
+    }
+
+    function updateChart() {
+        //Do not remove these 3 lines, it will cause memory leak
+        if (typeof(networkStatisticChart) == "undefined"){
+            return;
+        }
+        networkStatisticChart.data.datasets[0].data = rxValues;
+        networkStatisticChart.data.datasets[1].data = txValues;
+        networkStatisticChart.data.labels = timestamps;
+        if (networkStatisticChart != undefined){
+            networkStatisticChart.update();
+        }
+    }
+
+    function updateChartSize(){
+        let newSize = $("#networkActWrapper").width() - 300;
+        if (window.innerWidth > 750){
+            newSize = window.innerWidth - $(".toolbar").width() - 500;
+        }else{
+            newSize = $("#networkActWrapper").width() - 500;
+        }
+        if (networkStatisticChart != undefined){
+            networkStatisticChart.resize(newSize, 200);
+        }
+    }
+
+    function handleChartAccumulateResize(){
+        $("#networkActivity").hide();
+        $("#networkActivityPlaceHolder").show();
+        if (chartResizeTimeout != undefined){
+            clearTimeout(chartResizeTimeout);
+        }
+        chartResizeTimeout = setTimeout(function(){
+            chartResizeTimeout = undefined;
+            $("#networkActivityPlaceHolder").hide();
+            $("#networkActivity").show();
+            updateChartSize();
+        }, 300);
+    }
+
+    var chartResizeTimeout;
+    window.addEventListener('resize', () => {
+        handleChartAccumulateResize();
+    });
+
+    window.addEventListener("focus", function(event){
+        handleChartAccumulateResize();
+    });
+
+    
+    //Initialize chart data
+    initChart();
+    fetchData();
+    setInterval(fetchData, 1000);
+    setTimeout(function(){
+        handleChartAccumulateResize();
+    }, 1000);
+</script>
