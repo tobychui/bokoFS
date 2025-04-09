@@ -1,127 +1,130 @@
-<div class="ts-content is-rounded is-padded has-top-spaced-large" style="background: var(--ts-gray-800); color: var(--ts-gray-50)">
-    <div style="max-width: 480px">
-        <div class="ts-header is-huge is-heavy">
-            <div class="sysstatus_good">
-                <span class="ts-icon is-positive is-heading is-check-icon" style="color: var(--ts-positive-500);"></span>
-                <span i18n>Looks Good
-                    // 看起來不錯
-                </span>
-            </div>
-            <div class="sysstatus_attention" style="display:none;">
-                <span class="ts-icon is-warning is-heading is-exclamation-icon" style="color: var(--ts-warning-600);"></span>
-                <span i18n>Attention Required
-                    // 需要注意
-                </span>
-            </div>
-            <div class="sysstatus_bad" style="display:none;">
-                <span class="ts-icon is-negative is-heading is-xmark-icon" style="color: var(--ts-negative-500);"></span>
-                <span i18n>Critical Error
-                    // 嚴重錯誤
-                </span>
-            </div>
-            
-        </div>
-        <p class="sysstatus_good" i18n>This status shows you the general idea on how this storage node is doing in terms of disk health and other system conditions. See system analytic report for more details.
-            // 此狀態顯示了這個儲存節點在磁碟健康和其他系統條件方面的整體情況。 有關詳細資訊，請參閱系統分析報告。
-        </p>
-        <p class="sysstatus_attention" style="display:none;" i18n>Some disks are failing soon. Check the SMART status of the disks for more details.
-            // 某些磁碟的壽命即將結束。 請檢查磁碟的 SMART 狀態。
-        </p>
-        <p class="sysstatus_bad" style="display:none;" i18n>All disks are not healthy or failed. Replace the disks as soon as possible.
-            // 所有磁碟都不健康或已損壞。 請儘快更換磁碟。
-        </p>
-        <a href="#!" class="ts-button is-outlined" style="color: var(--ts-gray-50)" i18n>
-            Analytics Report
-            // 分析報告
-        </a>
-    </div>
-</div>
-<!-- Disk SMARTs -->
-<div class="has-top-spaced-large is-padded">
-    <div id="disk-smart-overview" class="ts-grid has-top-spaced-large is-relaxed is-3-columns is-stretched mobile:is-stacked">
-        <div class="column">
-            <div class="ts-content is-rounded is-padded">
-                <div class="ts-header is-truncated is-large is-heavy" i18n>
-                    SMART Status
-                    // 磁碟健康狀態
+<div class="ts-content">
+    <div class="ts-container is-padded">
+        <div class="ts-content is-rounded is-padded has-top-spaced-large" style="background: var(--ts-gray-800); color: var(--ts-gray-50)">
+            <div style="max-width: 480px">
+                <div class="ts-header is-huge is-heavy">
+                    <div class="sysstatus_good">
+                        <span class="ts-icon is-positive is-heading is-check-icon" style="color: var(--ts-positive-500);"></span>
+                        <span i18n>Looks Good
+                            // 看起來不錯
+                        </span>
+                    </div>
+                    <div class="sysstatus_attention" style="display:none;">
+                        <span class="ts-icon is-warning is-heading is-exclamation-icon" style="color: var(--ts-warning-600);"></span>
+                        <span i18n>Attention Required
+                            // 需要注意
+                        </span>
+                    </div>
+                    <div class="sysstatus_bad" style="display:none;">
+                        <span class="ts-icon is-negative is-heading is-xmark-icon" style="color: var(--ts-negative-500);"></span>
+                        <span i18n>Critical Error
+                            // 嚴重錯誤
+                        </span>
+                    </div>
+                    
                 </div>
-                <p>
-                    <span class="ts-icon is-spinning is-circle-notch-icon"></span>
-                    <span i18n>Loading
-                        // 載入中
-                    </span>
+                <p class="sysstatus_good" i18n>This status shows you the general idea on how this storage node is doing in terms of disk health and other system conditions. See system analytic report for more details.
+                    // 此狀態顯示了這個儲存節點在磁碟健康和其他系統條件方面的整體情況。 有關詳細資訊，請參閱系統分析報告。
+                </p>
+                <p class="sysstatus_attention" style="display:none;" i18n>Some disks are failing soon. Check the SMART status of the disks for more details.
+                    // 某些磁碟的壽命即將結束。 請檢查磁碟的 SMART 狀態。
+                </p>
+                <p class="sysstatus_bad" style="display:none;" i18n>All disks are not healthy or failed. Replace the disks as soon as possible.
+                    // 所有磁碟都不健康或已損壞。 請儘快更換磁碟。
+                </p>
+                <a href="#!" class="ts-button is-outlined" style="color: var(--ts-gray-50)" i18n>
+                    Analytics Report
+                    // 分析報告
+                </a>
+            </div>
+        </div>
+        <!-- Disk SMARTs -->
+        <div class="has-top-spaced-large is-padded">
+            <div id="disk-smart-overview" class="ts-grid has-top-spaced-large is-relaxed is-3-columns is-stretched mobile:is-stacked">
+                <div class="column">
+                    <div class="ts-content is-rounded is-padded">
+                        <div class="ts-header is-truncated is-large is-heavy" i18n>
+                            SMART Status
+                            // 磁碟健康狀態
+                        </div>
+                        <p>
+                            <span class="ts-icon is-spinning is-circle-notch-icon"></span>
+                            <span i18n>Loading
+                                // 載入中
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>  
+
+        <!-- Network IO -->
+        <div class="ts-box has-top-spaced-large is-rounded is-padded ">
+            <div class="ts-content">
+                <div class="ts-header" i18n>Real-time Network IO
+                    // 即時網路流量
+                </div>
+                <div id="networkActWrapper" class="has-top-spaced-large" style="position: relative;">
+                    <canvas id="networkActivity"></canvas>
+                </div>
+                <div id="networkActivityPlaceHolder" class="ts-blankslate is-secondary" style="display:none;"> 
+                    <div class="header" i18n>Graph Render Paused 
+                        // 已暫停圖表運算
+                    </div>
+                    <div class="description" i18n>Graph resumes after resizing or refocus
+                        // 當頁面調整大小或重新聚焦後，圖表將恢復運算
+                    </div>
+                </div>
+            </div>
+            <div class="ts-content is-dense">
+                <i class="ts-icon is-end-spaced is-circle-down-icon" style="color: #1890ff;"></i>
+                <span i18n>Inbound Traffic
+                    // 進站流量
+                </span>
+                <i class="ts-icon is-end-spaced has-start-spaced-large is-circle-up-icon" style="color: #52c41a;"></i>
+                <span i18n>Outbound Traffic
+                    // 出站流量
+                </span>
+            
+            </div>
+        </div>  
+
+        <!-- Network Interface -->
+        <div class="has-top-spaced-large is-padded">
+            <div class="ts-content">
+                <div class="ts-header is-truncated is-large is-heavy" i18n>Network Interfaces
+                    // 網路介面
+                </div>
+                <p i18n>List of network interfaces and their IP addresses.
+                    // 網路介面及其 IP 位址列表。
                 </p>
             </div>
+            <table class="ts-table is-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th i18n>iface name
+                            // 介面名稱
+                        </th>
+                        <th i18n>IP Address
+                            // IP 位址
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="network-interface-list">
+                    <tr>
+                        <td colspan="3">
+                            <span class="ts-icon is-spinning is-circle-notch-icon"></span>
+                            <span i18n>Loading
+                                // 載入中
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
-</div>  
-
-<!-- Network IO -->
-<div class="ts-box has-top-spaced-large is-rounded is-padded ">
-    <div class="ts-content">
-        <div class="ts-header" i18n>Real-time Network IO
-            // 即時網路流量
-        </div>
-        <div id="networkActWrapper" class="has-top-spaced-large" style="position: relative;">
-            <canvas id="networkActivity"></canvas>
-        </div>
-        <div id="networkActivityPlaceHolder" class="ts-blankslate is-secondary" style="display:none;"> 
-            <div class="header" i18n>Graph Render Paused 
-                // 已暫停圖表運算
-            </div>
-            <div class="description" i18n>Graph resumes after resizing or refocus
-                // 當頁面調整大小或重新聚焦後，圖表將恢復運算
-            </div>
-        </div>
-    </div>
-    <div class="ts-content is-dense">
-        <i class="ts-icon is-end-spaced is-circle-down-icon" style="color: #1890ff;"></i>
-        <span i18n>Inbound Traffic
-            // 進站流量
-        </span>
-        <i class="ts-icon is-end-spaced has-start-spaced-large is-circle-up-icon" style="color: #52c41a;"></i>
-        <span i18n>Outbound Traffic
-            // 出站流量
-        </span>
-    
-    </div>
-</div>  
-
-<!-- Network Interface -->
-<div class="has-top-spaced-large is-padded">
-    <div class="ts-content">
-        <div class="ts-header is-truncated is-large is-heavy" i18n>Network Interfaces
-            // 網路介面
-        </div>
-        <p i18n>List of network interfaces and their IP addresses.
-            // 網路介面及其 IP 位址列表。
-        </p>
-    </div>
-    <table class="ts-table is-striped">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th i18n>iface name
-                    // 介面名稱
-                </th>
-                <th i18n>IP Address
-                    // IP 位址
-                </th>
-            </tr>
-        </thead>
-        <tbody id="network-interface-list">
-            <tr>
-                <td colspan="3">
-                    <span class="ts-icon is-spinning is-circle-notch-icon"></span>
-                    <span i18n>Loading
-                        // 載入中
-                    </span>
-                </td>
-            </tr>
-        </tbody>
-    </table>
 </div>
-
 <script>
 
     /* Network Interface */

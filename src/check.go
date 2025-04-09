@@ -14,7 +14,7 @@ func commandExists(cmd string) bool {
 // checkRuntimeEnvironment checks if the required commands are available in the runtime environment
 func checkRuntimeEnvironment() bool {
 	packageMissing := false
-	commands := []string{"ffmpeg", "smartctl", "lsblk", "blkid", "df"}
+	commands := []string{"ffmpeg", "smartctl", "mdadm", "lsblk", "blkid", "df"}
 	for _, cmd := range commands {
 		if commandExists(cmd) {
 			fmt.Printf("\033[32m✔\033[0m '%s' exists\n", cmd)

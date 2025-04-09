@@ -1,0 +1,570 @@
+<style>
+    #activate_raid_btn{
+        background: var(--ts-positive-400) !important; 
+        border: 0px solid transparent !important;
+    }
+
+    .raid-details{
+        position: relative;
+    }
+
+    .raid-array-opr-btns{
+        position: absolute !important;
+        top: 1em;
+        right: 1em;
+    }
+
+    .raid-menu-badge{
+        margin-top: -3px !important;
+        margin-left: 0.15em !important;
+    }
+</style>
+<div class="ts-content">
+    <div class="ts-container is-padded">
+        <div class="ts-grid mobile:is-stacked">
+            <div class="column is-6-wide">
+                <div id="raid_array_list" class="ts-menu is-start-icon is-separated">
+                    <div class="ts-blankslate" style="pointer-events: none; user-select: none; opacity: 0.7;">
+                        <div class="description">
+                            <span class="ts-icon is-circle-notch-icon is-spinning"></span>
+                            <span class="has-start-spaced-small">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ts-divider has-top-spaced-small"></div>
+                <div class="ts-content is-center-aligned">
+                    <button class="ts-button is-start-icon is-positive is-circular">
+                        <span class="ts-icon is-circle-plus-icon" style="color: var(--ts-positive-500);"></span>
+                        <span i18n>Create RAID
+                        // 新增陣列
+                        </span>
+                    </button>
+                    <button class="ts-button is-start-icon is-positive is-circular">
+                        <span class="ts-icon is-rotate-icon" style="color: var(--ts-primary-500);"></span>
+                        <span i18n>Assemble
+                        // 重組陣列
+                        </span>
+                    </button>
+                </div>
+            </div>
+            <div class="column is-fluid">
+                <div id="raid_details">
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function initRAIDDeviceList(){
+        $.ajax({
+            url: './api/raid/list',
+            type: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                $('#raid_array_list').html("");
+                if (data.error != undefined){
+                    // Handle error response
+                    console.error('Error fetching RAID devices:', data.error);
+                    $('#raid_array_list').append('<div class="ts-text is-error">Error: ' + data.error + '</div>');
+                }else{
+                    data.forEach((raid, index) => {
+                        let raidDetails = renderRAIDPoolDetail(raid, index);
+                        $("#raid_array_list").append(raidDetails[0]);
+                        $('#raid_details').append(raidDetails[1]);
+                        getRAIDSpaceInfoForDev(raid.DevicePath);
+                    });
+
+                    if (data.length == 0){
+                        $('#raid_array_list').append(`
+                        <div class="ts-blankslate" style="pointer-events: none; user-select: none; opacity: 0.7;">
+                            <div class="description"> 
+                                <span class="ts-icon is-circle-check-icon" style="color: var(--ts-positive-400);"></span>
+                                <span class="has-start-spaced-small" i18n> No RAID array found. 
+                                            // 沒有 RAID 陣列
+                                </span>
+                            </div>
+                        </div>`);
+                    }
+                }
+
+                // Show the first RAID details by default
+                if (data.length > 0) {
+                    showRAIDDetails(0);
+                }
+                relocale(); // Recalculate layout
+                syncProgressTicker(); // Start the sync progress ticker
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching RAID devices:', error);
+            }
+        });
+    }
+    initRAIDDeviceList();
+
+    function refreshRAIDArrayStatus(devname){
+        //Hide the raid details
+        $(`.raid-details[mdx=${devname}]`).hide();
+        updateRAIDArrayStatus(devname, function(data){
+            if (data.error == undefined){
+               msgbox(i18nc("raid_device_updated_succ"));
+            }
+            $(`.raid-details[mdx=${devname}]`).show();
+        });
+
+    }
+
+    function updateRAIDArrayStatus(devname, callback=undefined){
+        if (devname.startsWith('/dev/')) {
+            devname = devname.slice(5);
+        }
+        $.ajax({
+            url: './api/raid/info?dev=' + devname,
+            type: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (data.error != undefined){
+                    // Handle error response
+                    console.error('Error fetching RAID status:', data.error);
+                    msgbox("Error: " + data.error);
+                    if (callback){
+                        callback(data);
+                    }
+                    return
+                }
+
+                // Update the RAID array status
+                // Find the corresponding menu item and details tab
+                let menuItem = $(`.raid-array[mdx="${devname}"]`);
+                let raidDetails = $(`.raid-details[mdx="${devname}"]`);
+                let index = menuItem.attr("idx");
+                let domEles = renderRAIDPoolDetail(data, index);
+                let currentShownDetailIndex = 0;
+                if ($(`.raid-array.is-active`).length > 0 && $(`.raid-array.is-active`).attr("idx")){
+                    currentShownDetailIndex = parseInt($(`.raid-array.is-active`).attr("idx"));
+                }
+                menuItem.replaceWith(domEles[0]);
+                raidDetails.replaceWith(domEles[1]);
+                showRAIDDetails(currentShownDetailIndex);
+                syncProgressTicker();
+                if (callback){
+                    callback(data);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error updating RAID status:', error);
+            }
+        });
+    }
+
+    function deleteRAIDArray(devname){
+        if (devname.startsWith('/dev/')) {
+            devname = devname.slice(5);
+        }
+
+        /*
+        //TODO: API still not ready
+        $.cjax({
+            url: './api/raid/delete',
+            method: 'POST',
+            data: { dev: devname},
+            success: function(data) {
+                if (data.error != undefined){
+                    // Handle error response
+                    console.error('Error deleting RAID device:', data.error);
+                    msgbox("Error: " + data.error);
+                }else{
+                    // Successfully deleted the device
+                    console.log('RAID device deleted successfully:', data);
+                    msgbox(i18nc("raid_device_deleted_succ"));
+                    setTimeout(function() {
+                        // Refresh the RAID device list after a short delay
+                        initRAIDDeviceList();
+                    }, 300);
+                }
+            },
+        });
+        */
+    }
+
+    // Utility function to convert bytes to human-readable format
+    function bytesToHumanReadable(bytes) {
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        if (bytes === 0) return '0 B';
+        const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+        return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+    }
+
+
+    function getRAIDSpaceInfoForDev(devname){
+        if (devname.startsWith('/dev/')) {
+            devname = devname.slice(5);
+        }
+        let gaugeElement = $(`.raid-details[mdx=${devname}]`).find(".raid-usage-info");
+        let updateElement = $(`.raid-details[mdx=${devname}]`).find(".raid-total-used-space");
+        $.get("./api/raid/overview", function(data){
+            if (data.error != undefined){
+                // Handle error response
+                return;
+            }
+            if (data && Array.isArray(data)) {
+                let raidInfo = data.find(raid => raid.Name === devname);
+                if (raidInfo) {
+                    let usedPercentage = (raidInfo.UsedSize / raidInfo.TotalSize) * 100;
+                    gaugeElement.find('.bar').css('--value', usedPercentage.toFixed(1));
+                    gaugeElement.find('.bar .text').text(`${usedPercentage.toFixed(1)}%`);
+                    updateElement.html(bytesToHumanReadable(raidInfo.UsedSize));
+                }
+            }
+        })
+    }
+
+    // Function to render RAID pool details
+    // This function creates the HTML structure for each RAID pool
+    // return the DOM element for the side menu and detail tab
+    function renderRAIDPoolDetail(raid, index){
+         // Add a new menu item for each RAID array
+         let mdX = raid.DevicePath.split('/').pop();
+         let isSyncing = false;
+         let isResyncPending = false;
+         let icon = '';
+            if (raid.State.includes('clean') && !raid.State.includes('sync')) {
+                icon = '<span class="ts-icon is-check-icon" style="color: var(--ts-positive-500); font-size: 2em;"></span>';
+            } else if (raid.State.includes('sync')) {
+                isSyncing = true;
+                if (raid.State.includes('resyncing') && raid.State.includes('PENDING')) {
+                    //Syncing is pending
+                    isResyncPending = true;
+                    icon = '<span class="ts-icon is-rotate-icon" style="color: var(--ts-positive-500); font-size: 2em;"></span>';
+                }else{
+                    icon = '<span class="ts-icon is-spinning is-rotate-icon" style="color: var(--ts-positive-500); font-size: 2em;"></span>';
+                }
+                
+            } else if (raid.State.includes('degraded')) {
+                icon = '<span class="ts-icon is-triangle-exclamation-icon" style="color: var(--ts-warning-600); font-size: 2em;"></span>';
+            } else if (raid.State.includes('fail')) {
+                icon = '<span class="ts-icon is-circle-xmark-icon" style="color: var(--ts-negative-500); font-size: 2em;"></span>';
+            } else {
+                icon = '<span class="ts-icon is-question-icon" style="color: var(--ts-gray-500); font-size: 2em;"></span>';
+            }
+
+            // Add a new menu item for each RAID array
+            const menuItem = `
+                <a class="raid-array item ${index==0?'is-active':''}" idx="${index}" id="raid_menu_${index}" mdx="${mdX}" onclick="showRAIDDetails(${index})">
+                    ${icon}
+                    <div class="ts-content is-dense">
+                        <div>
+                            <span class="ts-text is-heavy">${raid.DevicePath}</span>
+                            <span class="ts-badge is-secondary raid-menu-badge">${raid.RaidLevel.toUpperCase()}</span>
+                        </div>
+                        <div class="ts-text is-tiny has-top-spaced-small">
+                            ${raid.Name}
+                        </div>
+                    </div>
+                </a>
+            `;
+            
+            // Add a hidden div for each RAID array's details
+            const raidDetails = `
+                <div id="raid_details_${index}" mdx="${mdX}" idx="${index}" class="raid-details" style="display: none ;">
+                    <div class="ts-box">
+                        <div class="ts-content is-padded">
+                            <div class="ts-header is-start-icon">
+                                ${icon}
+                                ${raid.DevicePath} <span class="ts-badge is-start-spaced">${raid.RaidLevel.toUpperCase()}</span> 
+                            </div>
+                            <div class="ts-text is-description">
+                                ${raid.UUID}<br>
+                                ${raid.Name}
+                            </div>
+                            <div class="ts-text">
+                                <span i18n> State
+                                    // 狀態
+                                </span>: ${raid.State}<br>
+                                <!-- For Sync progress -->
+                                ${isSyncing?getRAIDSyncElement(raid, isSyncing):``}
+                                <!-- For RAID Completed -->
+                                ${isResyncPending? getRAIDResumeResyncElement(raid):``}
+                                <span i18n> Array Size
+                                    // 陣列大小
+                                </span>: ${bytesToHumanReadable(raid.ArraySize * 1024)}<br>
+                                <span i18n> Created
+                                    // 建立時間
+                                </span>: <span>${new Date(raid.CreationTime).toLocaleString('en-US', { timeZone: 'UTC' })}</span><br>
+                            </div>
+                            
+                            <!-- Disk States Summary -->
+                            <table class="ts-table is-single-line has-top-spaced-large">
+                                <thead>
+                                    <tr>
+                                        <th i18n>Disk Status
+                                            // 磁碟狀態
+                                        </th>
+                                        <th i18n>Counts 
+                                            // 數量
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td i18n> Active Devices
+                                            // 啟用的磁碟
+                                        </td>
+                                        <td>${raid.ActiveDevices}</td>
+                                    </tr>
+                                    <tr>
+                                        <td i18n> Working Devices
+                                            // 工作中的磁碟
+                                        </td>
+                                        <td>${raid.WorkingDevices}</td>
+                                    </tr>
+                                    <tr>
+                                        <td i18n> Failed Devices
+                                            // 故障的磁碟
+                                        </td>
+                                        <td>${raid.FailedDevices}</td>
+                                    </tr>
+                                    <tr>
+                                        <td i18n> Spare Devices
+                                            // 備用磁碟
+                                        </td>
+                                        <td>${raid.SpareDevices}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Usage Counters -->
+                            <div class="ts-grid is-evenly-divided has-top-spaced-large">
+                                <div class="column">
+                                    <div class="ts-wrap is-middle-aligned">
+                                        <div class="ts-gauge is-small is-circular raid-usage-info">
+                                            <div class="bar" style="--value: 0">
+                                                <div class="text">0%</div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="ts-text is-bold" i18n> Used Space
+                                                // 已使用空間
+                                            </div>
+                                           <span class="raid-total-used-space">???</span> / ${bytesToHumanReadable(raid.ArraySize * 1024)}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="column">
+                                    <div class="ts-wrap is-middle-aligned">
+                                        <div class="ts-gauge is-small is-circular">
+                                            <div class="bar" style="--value: 100">
+                                                <div class="text">---</div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="ts-text is-bold">傳輸</div>
+                                            0 B 已使用
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="has-top-spaced-small">
+                        ${getRAIDChildDiskElement(raid.DeviceInfo)}
+                    </div>
+                    <!-- Operations -->
+                    <div class="raid-array-opr-btns">
+                        <div class="ts-content">
+                            <button class="ts-button is-circular is-icon" onclick="refreshRAIDArrayStatus('${mdX}');">
+                                <span class="ts-icon is-arrows-rotate-icon"></span>
+                            </button>
+                            <button class="ts-button is-circular is-icon is-negative" onclick="deleteRAIDArray('${mdX}');">
+                                <span class="ts-icon is-trash-icon"></span>
+                            </button>
+                        </div>
+                    </div>  
+                </div>
+            `;
+        return [menuItem, raidDetails];
+    }
+
+    function getRAIDSyncElement(raid, isSyncing=true){
+        return `<div class="sync-progress has-top-spaced-small ${isSyncing?'need-update-raid-sync-progress':''}" devname="${raid.DevicePath}" style="display: ${isSyncing?"auto":"none"};">
+            <div class="ts-progress is-processing">
+            <div class="bar" style="--value: 0">
+                    <div class="text">0%</div>
+                </div>
+            </div>
+            <div class="ts-text is-description has-top-spaced-small">
+                <span i18n> Synchronized
+                    // 已處理</span>
+                <span class="processed_blocks"></span>
+                <span>/</span>
+                <span class="total_blocks"></span>
+                <span i18n> blocks
+                    // 個區塊
+                </span><br>
+                <!-- <span i18n> Speed
+                    // 速度
+                </span>: <span class="speed"></span><br>
+                <span i18n> Expected Time
+                    // 預估時間
+                </span>: <span class="expected_time"></span>
+                -->
+            </div>
+        </div>`;
+    }
+
+    // DOM element for RAID resume resync
+    function getRAIDResumeResyncElement(raid){
+        return `<div class="ts-notice has-top-spaced-small has-bottom-spaced-small">
+            <div class="title">
+                <span i18n> RAID Resync Pending
+                    // RAID 重組待處理
+                </span>
+            </div>
+            <div class="content">
+                <span i18n> The previous resync operation was interrupted. Click to resume.
+                    // 先前的重組操作已中斷，點擊以繼續。
+                </span>
+            </div>
+        </div>
+        <button id="activate_raid_btn" onclick="activateSyncPendingDisk('${raid.DevicePath}');" class="ts-button is-fluid has-bottom-spaced-small" i18n> Start Resync
+            // 開始重組
+        </button>`
+    }
+
+    // DOM elements for child disks
+    function getRAIDChildDiskElement(raidDeviceInfo){
+        if (raidDeviceInfo.length == 0 || raidDeviceInfo == null){
+            return `<div class="ts-blankslate" style="pointer-events: none; user-select: none; opacity: 0.7;">
+                <div class="description" i18n>No assigned disks
+                    // 沒有分配的磁碟
+                </div>
+            </div>`;
+        }
+
+        //Render each disk
+        let result = '';
+        for (let i = 0; i < raidDeviceInfo.length; i++) {
+            let disk = raidDeviceInfo[i];
+            if (disk.RaidDevice == -1){
+                continue;
+            }
+
+            let elementUUID = "raid_child_" + disk.DevicePath.replace(/\//g, "_");
+            let diskSdx = disk.DevicePath.split('/').pop();
+            let thisDiskInfo = getDiskInfoDevicePath(diskSdx); //Try to load disk info from cache
+            if (thisDiskInfo == null){
+                //Make a request to get the disk info
+                let thisDiskInfo = null;
+                $.ajax({
+                    url: `./api/info/disk/${diskSdx}`,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        if (data.error != undefined){
+                            return;
+                        }
+                        thisDiskInfo = data;
+                        $(`.raid-child-disk[diskid='${elementUUID}']`).find(".raid-disk-name").text(thisDiskInfo.model);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching disk info:', error);
+                    }
+                });
+            }
+            result += `
+            <div class="ts-box is-padded has-bottom-spaced-small raid-child-disk" diskid="${elementUUID}">
+                <div class="ts-content">
+                    <div>
+                        <span class="ts-badge is-secondary has-end-spaced-small" style="margin-top: -0.3em;">${disk.DevicePath}</span>
+                        <span class="ts-text is-heavy raid-disk-name">Raid Device ${disk.RaidDevice}</span>
+                    </div>
+                    <div class="ts-text is-tiny has-top-spaced-small">
+                    <div class="has-start-spaced-small">
+                        <span i18n> State
+                        // 狀態
+                        </span>: ${disk.State.join(', ')}
+                    </div>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+        return result;
+    }
+
+    // Function to activate a finished RAID sync
+    // Will set the RAID device to -readwrite state
+    function activateSyncPendingDisk(devname){
+        $.cjax({
+            url: './api/raid/start-resync',
+            method: 'POST',
+            data: { dev: devname},
+            success: function(data) {
+                if (data.error != undefined){
+                    // Handle error response
+                    console.error('Error start resyncing RAID device:', data.error);
+                }else{
+                    // Successfully activated the device
+                    console.log('RAID device resync started successfully:', data);
+                    msgbox(i18nc("raid_resync_started_succ"));
+                    setTimeout(function() {
+                        // Refresh the RAID device list after a short delay
+                        updateRAIDArrayStatus(devname);
+                    }, 300);
+                }
+            },
+        });
+    }
+
+    //Create a ticker to check for RAID sync progress
+    function syncProgressTicker(){
+        let syncProgressTracker = $(".need-update-raid-sync-progress");
+        if (syncProgressTracker.length > 0){
+            syncProgressTracker.each(function(){
+                let devname = $(this).attr("devname");
+                $.ajax({
+                    url: './api/raid/sync?dev=' + devname,
+                    type: 'GET',
+                    dataType: 'json',
+                    data: { devname: devname },
+                    success: function(data) {
+                        if (data.error != undefined){
+                            // The device is no longer in sync state. Hide the sync progress bar
+                            $(`.sync-progress[devname="${devname}"]`).hide();
+                            $(`.sync-progress[devname="${devname}"]`).removeClass("need-update-raid-sync-progress");
+                        }else{
+                            let progress = parseFloat(data.ResyncPercent);
+                            let total_blocks = parseInt(data.TotalBlocks);
+                            let processed_blocks = parseInt(data.CompletedBlocks);
+                            let expected_time = data.ExpectedTime;
+                            let speed = data.Speed;
+
+                            $(`.sync-progress[devname="${devname}"] .bar`).css('--value', progress);
+                            $(`.sync-progress[devname="${devname}"] .bar .text`).text(`${progress.toFixed(1)}%`);
+                            $(`.sync-progress[devname="${devname}"] .processed_blocks`).text(processed_blocks);
+                            $(`.sync-progress[devname="${devname}"] .total_blocks`).text(total_blocks);
+                            //$(`.sync-progress[devname="${devname}"] .ts-text.is-description .speed`).text(speed);
+                            //$(`.sync-progress[devname="${devname}"] .ts-text.is-description .expected_time`).text(expected_time);
+                            
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error fetching RAID sync progress:', error);
+                    }
+                });
+            });
+        }
+    }
+
+    setInterval(syncProgressTicker, 5000); // Check every 5 seconds
+
+    function showRAIDDetails(index) {
+        $('.raid-details').hide(); // Hide all RAID details
+        $(`#raid_details_${index}`).show(); // Show the selected RAID details
+        $('.raid-array.is-active').removeClass('is-active'); // Remove active class from all menu items
+        $(`#raid_menu_${index}`).addClass('is-active'); // Add active class to the selected menu item
+        relocale(); // Recalculate layout
+    }
+</script>
+

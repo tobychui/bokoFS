@@ -4,13 +4,13 @@ import (
 	"embed"
 	"flag"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"imuslab.com/bokofs/bokofsd/mod/bokofs"
 	"imuslab.com/bokofs/bokofsd/mod/bokofs/bokoworker"
-	"imuslab.com/bokofs/bokofsd/mod/netstat"
 )
 
 //go:embed web/*
@@ -19,47 +19,21 @@ var embeddedFiles embed.FS
 func main() {
 	flag.Parse()
 
-	/* File system handler */
-	var fileSystem http.FileSystem
-	if *devMode {
-		fmt.Println("Development mode enabled. Serving files from ./web directory.")
-		fileSystem = http.Dir("./web")
-	} else {
-		fmt.Println("Production mode enabled. Serving files from embedded filesystem.")
-		subFS, err := fs.Sub(embeddedFiles, "web")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error accessing embedded subdirectory: %v\n", err)
-			os.Exit(1)
-		}
-		fileSystem = http.FS(subFS)
-	}
-
-	configFolderPath := "./config"
-	if *config != "" {
-		configFolderPath = *config
-	}
-	if _, err := os.Stat(configFolderPath); os.IsNotExist(err) {
-		fmt.Printf("Config folder does not exist. Creating folder at %s\n", configFolderPath)
-		if err := os.Mkdir(configFolderPath, os.ModePerm); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating config folder: %v\n", err)
-			os.Exit(1)
-		}
-	}
-
-	/* Network statistics */
-	nsb, err := netstat.NewNetStatBuffer(300)
+	// Start the application
+	err := initialization()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating network statistics buffer: %v\n", err)
-		os.Exit(1)
+		panic(err)
 	}
-	defer netstatBuffer.Close()
-	netstatBuffer = nsb
 
-	/* Package Check */
-	if !checkRuntimeEnvironment() {
-		fmt.Println("Runtime environment check failed. Please install the missing packages.")
-		os.Exit(1)
-	}
+	// Capture termination signals and call cleanup
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-signalChan
+		fmt.Println("Received termination signal, cleaning up...")
+		cleanup()
+		os.Exit(0)
+	}()
 
 	//DEBUG
 	wds, err := bokofs.NewWebdavInterfaceServer("/disk/", "/thumb/")
@@ -89,7 +63,8 @@ func main() {
 
 	//END DEBUG
 
-	http.Handle("/", http.FileServer(fileSystem))
+	/* Static Web Server */
+	http.Handle("/", csrfMiddleware(tmplMiddleware(http.FileServer(webfs))))
 
 	/* WebDAV Handlers */
 	http.Handle("/disk/", wds.FsHandler())     //Note the trailing slash
@@ -101,7 +76,7 @@ func main() {
 		fmt.Fprintln(w, "Meta handler not implemented yet")
 	}))
 
-	http.Handle("/api/", HandlerAPIcalls())
+	http.Handle("/api/", csrfMiddleware(HandlerAPIcalls()))
 
 	addr := fmt.Sprintf(":%d", *httpPort)
 	fmt.Printf("Starting static web server on %s\n", addr)

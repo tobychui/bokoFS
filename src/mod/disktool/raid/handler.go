@@ -241,7 +241,7 @@ func (m *Manager) HandleListUsableDevices(w http.ResponseWriter, r *http.Request
 
 // Handle loading the detail of a given RAID array
 func (m *Manager) HandleLoadArrayDetail(w http.ResponseWriter, r *http.Request) {
-	devName, err := utils.GetPara(r, "devName")
+	devName, err := utils.GetPara(r, "dev")
 	if err != nil {
 		utils.SendErrorResponse(w, "invalid device name given")
 		return
@@ -678,4 +678,51 @@ func (m *Manager) HandleRenderOverview(w http.ResponseWriter, r *http.Request) {
 
 	js, _ := json.Marshal(results)
 	utils.SendJSONResponse(w, string(js))
+}
+
+/* Sync State Related Features */
+// HandleGetRAIDSyncState Get the sync state of a given RAID device
+func (m *Manager) HandleGetRAIDSyncState(w http.ResponseWriter, r *http.Request) {
+	devName, err := utils.GetPara(r, "dev")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid device name given")
+		return
+	}
+
+	if !strings.HasPrefix(devName, "/dev/") {
+		devName = filepath.Join("/dev/", devName)
+	}
+
+	//Get the sync state of the RAID device
+	syncState, err := m.GetSyncStateByPath(devName)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	js, _ := json.Marshal(syncState)
+	utils.SendJSONResponse(w, string(js))
+}
+
+// HandleSyncPendingToReadWrite Set the pending sync to read-write mode
+// to reactivate the resync process
+func (m *Manager) HandleSyncPendingToReadWrite(w http.ResponseWriter, r *http.Request) {
+	devName, err := utils.PostPara(r, "dev")
+	if err != nil {
+		utils.SendErrorResponse(w, "invalid device name given")
+		return
+	}
+
+	if !strings.HasPrefix(devName, "/dev/") {
+		devName = filepath.Join("/dev/", devName)
+	}
+
+	//Set the pending sync to read-write mode
+	err = m.SetSyncPendingToReadWrite(devName)
+	if err != nil {
+		utils.SendErrorResponse(w, err.Error())
+		return
+	}
+
+	utils.SendOK(w)
 }

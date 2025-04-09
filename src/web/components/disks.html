@@ -1,21 +1,27 @@
-
-<div id="disk-list">
-    <div class="ts-box ts-content disk-info">
-        <span class="ts-icon is-spinning is-circle-notch-icon"></span>
-        <span class="has-start-padded-small" i18n>
-            Loading...
-        </span>
+<div class="ts-content">
+    <div class="ts-container is-padded">
+        <div id="disk-list">
+            <div class="ts-box ts-content disk-info">
+                <span class="ts-icon is-spinning is-circle-notch-icon"></span>
+                <span class="has-start-padded-small" i18n>
+                    Loading...
+                </span>
+            </div>
+        </div>
+        <div class="ts-wrap is-end-aligned">
+            <button id="refresh_disk_list_btn" class="ts-button is-start-icon has-top-spaced-large" >
+                <span class="ts-icon is-rotate-icon"></span>
+                <span i18n>
+                    Refresh
+                    // 重新整理
+            </button>
+        </div>
     </div>
-</div>
-<div class="ts-wrap is-end-aligned">
-    <button id="refresh_disk_list_btn" class="ts-button is-start-icon has-top-spaced-large" >
-        <span class="ts-icon is-rotate-icon"></span>
-        <span i18n>
-            Refresh
-            // 重新整理
-    </button>
-</div>
+</div>  
 <script>
+    let hostDiskInfo = {
+        "disks": []
+    };
     function humanFileSize(size) {
         var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024));
         return +((size / Math.pow(1024, i)).toFixed(1)) * 1 + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
@@ -33,6 +39,7 @@
                 var disks = data;
                 var diskList = $("#disk-list");
                 diskList.empty();
+                hostDiskInfo.disks = disks;
                 for (var i = 0; i < disks.length; i++) {
                     let disk = disks[i];
                     let partitionDOM = "";
@@ -84,6 +91,13 @@
                                         </div>`;
                     }
 
+                    if (disk.partitions.length == 0){
+                        partitionTabs = `<a class="item is-disabled" i18n> 
+                                            No Partitions
+                                            // 無分割區
+                                        </a>`;
+                    }
+
                     $(diskList).append(`<div class="ts-box ts-content has-top-spaced-small disk-info">
                             <div class="ts-grid mobile:is-stacked">
                                 <div class="column is-fluid">
@@ -127,4 +141,27 @@
         });
     }
     loadDiskInfo();
+
+    /* extern functions */
+
+    // Get disk info by device path. Returns the disk or partition object.
+    // return null if not found.
+    function getDiskInfoDevicePath(devpath) {
+        if (devpath.startsWith("/dev/")) {
+            devpath = devpath.substring(5);
+        }
+        hostDiskInfo.disks.forEach(function(disk) {
+            console.log(disk.name, devpath);
+            if (disk.name == devpath) {
+                return disk;
+            }
+            disk.partitions.forEach(function(partition) {
+                if (partition.path == devpath) {
+                    return partition;
+                }
+            });
+        });
+
+        return null;
+    }
 </script>

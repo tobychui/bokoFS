@@ -58,8 +58,12 @@ function i18nc(key, language=undefined){
 let translatedMessages = {
     'en': {
         'disk_info_refreshed': 'Disk information reloaded',
+        "raid_resync_started_succ": 'RAID resync started successfully',
+        "raid_device_updated_succ": 'RAID device status reloaded',
     },
     'zh': {
         'disk_info_refreshed': '磁碟資訊已重新載入',
+        "raid_resync_started_succ": 'RAID 重建已成功啟動',
+        "raid_device_updated_succ": 'RAID 裝置狀態已重新載入',
     }
 };

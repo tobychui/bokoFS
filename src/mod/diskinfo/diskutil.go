@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"log"
+
 	"imuslab.com/bokofs/bokofsd/mod/diskinfo/blkid"
 	"imuslab.com/bokofs/bokofsd/mod/diskinfo/df"
 	"imuslab.com/bokofs/bokofsd/mod/diskinfo/fdisk"
@@ -44,6 +46,7 @@ func DevicePathIsValidDisk(path string) bool {
 
 	allBlockDevices, err := lsblk.GetLSBLKOutput()
 	if err != nil {
+		log.Println("Error getting block devices:", err)
 		return false
 	}
 

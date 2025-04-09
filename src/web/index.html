@@ -7,6 +7,7 @@
         Admin Panel | BokoFS
         // 管理介面 | BokoFS
     </title>
+    <meta name="boko.csrf.Token" content="{{.csrfToken}}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- css -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas-ui/5.0.2/tocas.min.css">
@@ -27,6 +28,22 @@
             z-index: 9999;
         }
     </style>
+    <script>
+        //Add a new function to jquery for ajax override with csrf token injected
+        $.cjax = function(payload){
+            let requireTokenMethod = ["POST", "PUT", "DELETE"];
+            if (requireTokenMethod.includes(payload.method) || requireTokenMethod.includes(payload.type)){
+                //csrf token is required
+                let csrfToken = document.getElementsByTagName("meta")["boko.csrf.Token"].getAttribute("content");
+                payload.headers = {
+                    "X-CSRF-Token": csrfToken,
+                }
+            }
+
+            $.ajax(payload);
+        }
+    </script>
+    <link rel="icon" type="image/png" href="img/favicon.png">
 </head>
 <body>
     <div class="ts-content ">
@@ -48,7 +65,7 @@
                 <a href="" class="item" style="user-select: none;">
                     <img id="sysicon" class="ts-image" style="height: 30px" src="img/logo.svg"></img>
                 </a>
-                <button href="#!" class="item is-active" data-tab="tab-status" i18n>
+                <button href="#!" class="item" data-tab="tab-status" i18n>
                     Status
                     // 系統狀態
                 </button>
@@ -60,7 +77,7 @@
                     Disks
                     // 磁碟資訊
                 </button>
-                <button href="#!" class="item" data-tab="tab-raid" i18n>
+                <button href="#!" class="item is-active" data-tab="tab-raid" i18n>
                     RAID
                     // 磁碟陣列
                 </button>
@@ -80,16 +97,14 @@
         </div>
     </div>
     <div class="ts-divider"></div>
-    <div class="ts-content is-vertically-padded">
-        <div class="ts-container">
-            <div class="ts-content boko-panel-component" id="tab-status" component="status.html">Status</div>
-            <div class="ts-content boko-panel-component" id="tab-connections" component="connections.html">Connections</div>
-            <div class="ts-content boko-panel-component" id="tab-disks" component="disks.html">Disks</div>
-            <div class="ts-content boko-panel-component" id="tab-raid" component="raid.html">RAID</div>
-            <div class="ts-content boko-panel-component" id="tab-tools">Tools</div>
-            <div class="ts-content boko-panel-component" id="tab-logs">Logs</div>
-            <div class="ts-content boko-panel-component" id="tab-settings">Settings</div>
-        </div>  
+    <div>
+        <div class="boko-panel-component" id="tab-status" component="status.html">Status</div>
+        <div class="boko-panel-component" id="tab-connections" component="connections.html">Connections</div>
+        <div class="boko-panel-component" id="tab-disks" component="disks.html">Disks</div>
+        <div class="boko-panel-component" id="tab-raid" component="raid.html">RAID</div>
+        <div class="boko-panel-component" id="tab-tools">Tools</div>
+        <div class="boko-panel-component" id="tab-logs">Logs</div>
+        <div class="boko-panel-component" id="tab-settings">Settings</div>
     </div>
     <div class="ts-container">
         <div class="ts-divider"></div>
@@ -132,6 +147,7 @@
             $("#msgbox").stop().finish().fadeOut(200);
         });
         $("#msgbox").hide();
+    
     </script>
     <script src="./js/locale.js"></script>
 </body>
