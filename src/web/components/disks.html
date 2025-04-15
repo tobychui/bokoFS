@@ -151,7 +151,6 @@
             devpath = devpath.substring(5);
         }
         hostDiskInfo.disks.forEach(function(disk) {
-            console.log(disk.name, devpath);
             if (disk.name == devpath) {
                 return disk;
             }

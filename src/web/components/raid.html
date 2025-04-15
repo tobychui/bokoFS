@@ -18,6 +18,22 @@
         margin-top: -3px !important;
         margin-left: 0.15em !important;
     }
+
+    .new_raid_disk_selected{
+        position: absolute;
+        top: 0;
+        right: 0.4em;
+        color: var(--ts-positive-500);
+        display: none;
+    }
+
+    .new-raid-disk-info.selected .new_raid_disk_selected{
+        display: block;
+    }   
+
+    .new_raid_disk_selected span.ts-icon{
+        font-size: 2em !important;
+    }
 </style>
 <div class="ts-content">
     <div class="ts-container is-padded">
@@ -39,7 +55,7 @@
                         // 新增陣列
                         </span>
                     </button>
-                    <button class="ts-button is-start-icon is-positive is-circular">
+                    <button onclick="showForceAssembleWarning();" class="ts-button is-start-icon is-positive is-circular">
                         <span class="ts-icon is-rotate-icon" style="color: var(--ts-primary-500);"></span>
                         <span i18n>Assemble
                         // 重組陣列
@@ -54,8 +70,45 @@
             </div>
         </div>
     </div>
+    <style>
+        
+    </style>
+    <dialog id="raid_assemble_warning" class="ts-modal">
+        <div class="content">
+            <div class="ts-content">
+                <div class="ts-header" i18n>Confirm force stop & reload RAID from mdadm.conf? 
+                    // 確認強制停止並從 mdadm.conf 重新載入 RAID 陣列？
+                </div>
+            </div>
+            <div class="ts-divider"></div>
+            <div class="ts-content">
+                <div class="ts-text is-description">
+                    <span i18n> This will stop all RAID arrays and reload all configs from mdadm.conf. Mounted RAID partitions will not be unmounted.
+                        // 這將停止所有 RAID 陣列並從 mdadm.conf 重新載入設定，已掛載的 RAID 分割區不會被卸載。
+                    </span>
+                </div>
+            </div>
+            <div class="ts-divider"></div>
+            <div class="ts-content is-tertiary">
+                <div class="ts-wrap is-end-aligned">
+                    <button class="ts-button is-negative" onclick="confirmApplyReassemble();" i18n>Confirm
+                        // 確認
+                    </button>
+                    <button class="ts-button" onclick="cancelForceAssemble();" i18n>Cancel
+                        // 取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </dialog>
+    <dialog id="raid_new" class="ts-modal is-big mobile:is-fullscreen" open>
+
+    </dialog>
 </div>
 <script>
+    $("#raid_new").load("./components/raid_new.html", function(){
+        
+    });
     function initRAIDDeviceList(){
         $.ajax({
             url: './api/raid/list',
@@ -110,6 +163,7 @@
                msgbox(i18nc("raid_device_updated_succ"));
             }
             $(`.raid-details[mdx=${devname}]`).show();
+            getRAIDSpaceInfoForDev(devname);
         });
 
     }
@@ -350,34 +404,39 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="column">
-                                    <div class="ts-wrap is-middle-aligned">
-                                        <div class="ts-gauge is-small is-circular">
-                                            <div class="bar" style="--value: 100">
-                                                <div class="text">---</div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div class="ts-text is-bold">傳輸</div>
-                                            0 B 已使用
-                                        </div>
-                                    </div>
-                                </div>
+                                
                             </div>
 
                         </div>
                     </div>
+                    <!-- Child Disks -->
                     <div class="has-top-spaced-small">
                         ${getRAIDChildDiskElement(raid.DeviceInfo)}
+                    </div>
+                    <!-- Operations -->
+                    <div class="has-top-spaced-small">
+                        <div class="ts-box">
+                            <div class="ts-content">
+                                <button class="ts-button is-start-icon is-positive is-circular" onclick="" >
+                                    <span class="ts-icon is-rotate-icon" style="color: var(--ts-primary-500);"></span>
+                                    <span i18n> Assemble
+                                        // 重組陣列
+                                    </span>
+                                </button>
+                                <button class="ts-button is-circular is-start-icon is-negative"> 
+                                    <span class="ts-icon is-trash-icon"></span>
+                                    <span i18n> Delete RAID
+                                        // 刪除陣列
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <!-- Operations -->
                     <div class="raid-array-opr-btns">
                         <div class="ts-content">
                             <button class="ts-button is-circular is-icon" onclick="refreshRAIDArrayStatus('${mdX}');">
                                 <span class="ts-icon is-arrows-rotate-icon"></span>
-                            </button>
-                            <button class="ts-button is-circular is-icon is-negative" onclick="deleteRAIDArray('${mdX}');">
-                                <span class="ts-icon is-trash-icon"></span>
                             </button>
                         </div>
                     </div>  
@@ -565,6 +624,41 @@
         $('.raid-array.is-active').removeClass('is-active'); // Remove active class from all menu items
         $(`#raid_menu_${index}`).addClass('is-active'); // Add active class to the selected menu item
         relocale(); // Recalculate layout
+    }
+
+    /* Assemble RAID */
+    function cancelForceAssemble(){
+        $('#raid_assemble_warning')[0].close();
+    }
+
+    function showForceAssembleWarning(){
+        $('#raid_assemble_warning')[0].showModal();
+    }
+
+    function AssembleAllRAID(){
+        $.cjax({
+            url: './api/raid/reassemble',
+            method: 'POST',
+            success: function(data) {
+                if (data.error != undefined){
+                    // Handle error response
+                    console.error('Error reassembling RAID device:', data.error);
+                }else{
+                    // Successfully activated the device
+                    console.log('RAID device reassemble started successfully:', data);
+                    msgbox(i18nc("raid_reassemble_started_succ"));
+                    setTimeout(function() {
+                        // Refresh the RAID device list after a short delay
+                        initRAIDDeviceList();
+                    }, 300);
+                }
+            },
+        });
+    }
+
+    function confirmApplyReassemble(){
+        $('#raid_assemble_warning')[0].close();
+        AssembleAllRAID();
     }
 </script>
 

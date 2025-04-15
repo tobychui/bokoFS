@@ -1,0 +1,541 @@
+<!-- This will be shown in a ts-modal in the raid.html-->
+<style>
+    .new-raid-modal-content{
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    @media screen and (max-width: 767px) {
+        .new-raid-modal-content {
+            max-height: none;
+        }
+    }
+
+    .new-raid-disk-info{
+        cursor: pointer;
+        
+    }
+
+    .new-raid-disk-info:hover{
+        opacity: 0.5;
+    }
+
+    /* RAID Type space visualizer */
+    .raidTypeSpaceVisualizer{
+        width: 100%;
+        display: flex;
+        height: 42px;
+    }
+
+    .raidTypeSpaceVisualizer .bars {
+        flex: 1; /* Occupy the remaining space */
+        display: flex; /* Nested flex container */
+        min-height: 2.6em;
+        border-radius: 0.4em;
+        overflow: hidden;
+        background-color: var(--ts-gray-500);
+    }
+
+    .raidTypeSpaceVisualizer .bar{
+        text-align: center;
+        float: left;
+        color: white;
+        padding-top: 0.6em;
+    }
+
+    .raidTypeSpaceVisualizer .bar.protected{
+        background-color: var(--ts-primary-500);
+        min-width: 100px;
+    }
+    .raidTypeSpaceVisualizer .bar.usable{
+        background-color: var(--ts-positive-400);
+        min-width: 100px;
+    }
+    .raidTypeSpaceVisualizer .bar.wasted{
+        background-color: var(--ts-gray-500);
+        width: 0%;
+    }
+</style>
+<div class="content">
+<div class="ts-content">
+    <div class="ts-header" i18n>Create New RAID Array
+        // 建立 RAID 陣列
+    </div>
+</div>
+<div class="ts-divider"></div>
+<div class="ts-content new-raid-modal-content">
+    <div class="ts-grid mobile:is-stacked" >
+        <div class="column is-3-wide">
+            <div class="ts-procedure is-vertical has-top-spaced-large" style="position: sticky; top: 0;">
+                <a step="1" class="item is-active">
+                    <div class="content">
+                        <div class="indicator"></div>
+                        <div class="label" i18n>RAID Name
+                            // 陣列名稱
+                        </div>
+                    </div>
+                </a>
+                <a step="2" class="item">
+                    <div class="content">
+                        <div class="indicator"></div>
+                        <div class="label" i18n>Select Disks
+                            // 選擇磁碟
+                        </div>
+                    </div>
+                </a>
+                <a step="3" class="item">
+                    <div class="content">
+                        <div class="indicator"></div>
+                        <div class="label" i18n>Raid Type
+                            // 陣列類型
+                        </div>
+                    </div>
+                </a>
+                <a step="4" class="item">
+                    <div class="content">
+                        <div class="indicator"></div>
+                        <div class="label" i18n>Confirm
+                            // 確認設定
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        <div class="column is-13-wide" style="overflow-y: auto;">
+            <div class="ts-content">
+                <!-- Array Name -->
+                <div class="ts-text" i18n>RAID Name
+                    // 陣列名稱
+                </div>
+                <div class="ts-input has-top-spaced-small">
+                    <input type="text" placeholder="my-raid" id="raid_name" i18n>
+                    <span class="ts-icon is-circle-check-icon raid_name_valid_icon" style="color: var(--ts-positive-400); display:none;"></span>
+                </div>
+                <div class="ts-text is-description" i18n>Only alphabet, digits, _ (underscore) and - (hyphen) are allowed
+                    // 只允許字母、數字、_ (底線) 和 - (連字符)
+                </div>
+
+                <!-- Select Disks -->
+                <div class="ts-divider has-top-spaced-small has-bottom-spaced-large"></div>
+                <div id="new_raid_disk_select">
+                    <div class="ts-content">
+                        <div class="ts-text is-description" i18n>Loading disks, please wait...
+                            // 正在載入磁碟，請稍候...
+                        </div>
+                    </div>
+                </div>
+    
+                <div class="ts-text is-description has-top-spaced-small" i18n> Tips: For any extra disks selected, it will be used as spare disks.
+                    // 提示：選擇的任何額外磁碟將用作備用磁碟。
+                </div>
+                <div class="ts-wrap is-end-aligned">
+                    <button class="ts-button is-outlined" i18n>Refresh
+                        // 重新整理
+                    </button>
+                </div>
+
+                <!-- Array Type -->
+                <div class="ts-divider has-top-spaced-small has-bottom-spaced-small"></div>
+                <div class="ts-text" i18n>RAID Type
+                    // 陣列類型
+                </div>
+                <button class="ts-button is-start-icon has-top-spaced-small" data-dropdown="new_raid_type_select">
+                    <span class="ts-icon is-chevron-down-icon"></span>
+                    <span class="raid_type_selected" i18n>Select RAID Type
+                        // 選擇陣列類型
+                    </span>
+                </button>
+                <div class="ts-dropdown is-end-icon" id="new_raid_type_select">
+                    <button class="item raid_type" value="raid1">RAID 1 <span class="ts-icon is-star-icon" style="color: var(--ts-warning-400);"></span></button>
+                    <button class="item raid_type" value="raid6">RAID 6 <span class="ts-icon is-star-icon" style="color: var(--ts-warning-400);"></span></button>
+                    <button class="item raid_type" value="raid5">RAID 5 </button>
+                    <button class="item raid_type" value="raid0">RAID 0</button>
+                </div>
+
+                <!-- Space Estimation -->
+                <div class="ts-divider has-top-spaced-small has-bottom-spaced-small"></div>
+                <div class="ts-text" i18n>Usable Space
+                    // 可使用空間
+                </div>
+                <div class="ts-blankslate" id="capacityVisualizerInformationSlate" style="pointer-events: none; user-select: none; opacity: 0.5;">
+                    <div class="description" i18n> Select disks and RAID type to estimate usable space.
+                        // 選擇磁碟和陣列類型以估算可用空間。
+                    </div>
+                </div>
+                <div id="capacityVisualizer" class="ts-content" style="display: none;">
+                    <div class="raidTypeSpaceVisualizer">
+                        <div class="bars">
+                            <div class="bar usable" id="estimatedUsableSpace">0%</div>
+                            <div class="bar protected" id="estimatedProtectionSpace">0%</div>
+                            <div class="bar wasted" id="estimatedWastedSpace">0%</div>
+                        </div>
+                    
+                    </div>
+                    <div class="ts-content" style="float: right;">
+                        <div class="ts-badge is-spaced-small" style="background-color: var(--ts-positive-400); color: white;" i18n>Available Space
+                            // 可用空間
+                        </div>
+                        <div class="ts-badge is-spaced-small" style="background-color: var(--ts-primary-500); color: white;" i18n>Redundancy
+                            // 冗餘
+                        </div>
+                        <div class="ts-badge is-spaced-small" style="background-color: var(--ts-gray-500); color: white;" i18n>Unused
+                            // 未使用
+                        </div>
+                    </div>
+                    <br>
+                </div>
+            </div>
+            
+        </div>
+        
+    </div>
+</div>
+<div class="ts-divider"></div>
+<div class="ts-content is-tertiary">
+    <div class="ts-wrap is-end-aligned">
+        <button class="ts-button" i18n>Confirm
+            // 確認
+        </button>
+        <button class="ts-button is-outlined" i18n>Cancel
+            // 取消
+        </button>
+    </div>
+</div>
+
+<script>
+
+    /* RAID name validation */
+    $("#raid_name").on("keydown", function() {
+        validateRaidName();
+    });
+
+    $("#raid_name").on("change", function() {
+        validateRaidName();
+    });
+
+    function validateRaidName(){
+        var raidName = $("#raid_name").val().trim();
+        var isValid = /^[a-zA-Z0-9_-]+$/.test(raidName) && raidName.trim() !== "";
+
+        if (raidName == ""){
+            $("#raid_name").parent().removeClass("is-end-icon");
+            $("a[step='1']").removeClass("is-completed").removeClass("is-active");
+            $("a[step='2']").removeClass("is-active");
+            $(".ts-icon.raid_name_valid_icon").hide();
+        } else if (isValid) {
+            $("#raid_name").parent().removeClass("is-negative");
+            $("a[step='1']").removeClass("is-active").addClass("is-completed");
+            $("a[step='2']").addClass("is-active");
+            $("#raid_name").parent().addClass("is-end-icon");
+            $(".ts-icon.raid_name_valid_icon").show();
+        } else {
+            $("#raid_name").parent().addClass("is-negative");
+            $("a[step='1']").removeClass("is-completed").addClass("is-active");
+            $("a[step='2']").removeClass("is-active");
+            $("#raid_name").parent().removeClass("is-end-icon");
+            $(".ts-icon.raid_name_valid_icon").hide();
+        }
+    }
+
+    /* Disk selection */
+    function initNewRAIDDiskList(){
+        $.get("./api/info/list", function(data) {
+            if (data) {
+                var disks = data;
+                var diskList = $("#new_raid_disk_select");
+                diskList.empty();
+
+                for (var i = 0; i < disks.length; i++) {
+                    let disk = disks[i];
+                    let partitionTable = "";
+                    let encodedDiskInfo = encodeURIComponent(JSON.stringify(disk));
+                    let diskIsMounted = false;
+                    let diskIsAlreadyRAID = false; //The disk already belongs to another RAID array
+                    // Render the partition table
+                    if (disk.partitions.length > 0) {
+                        partitionTable += `<table class="ts-table is-bordered is-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th i18n>Partition Name
+                                                        // 分割區    
+                                                    </th>
+                                                    <th i18n>Size
+                                                        // 大小    
+                                                    </th>
+                                                    <th i18n>Type
+                                                        // 類型
+                                                    </th>
+                                                    <th i18n>Mount Point
+                                                        // 掛載點
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>`;
+                        for (var j = 0; j < disk.partitions.length; j++) {
+                            let partition = disk.partitions[j];
+                            partitionTable += `<tr>
+                                                    <td>${partition.name}</td>
+                                                    <td>${humanFileSize(partition.size)}</td>
+                                                    <td>${partition.fstype || partition.blocktype}</td>
+                                                    <td>${partition.mountpoint || ""}</td>
+                                               </tr>`;
+                            if (partition.mountpoint) {
+                                diskIsMounted = true;
+                            }
+                            if (partition.blocktype.includes("raid")) {
+                                diskIsAlreadyRAID = true;
+                            }
+                        }
+                        partitionTable += `</tbody></table>`;
+                    } else {
+                        partitionTable = `<div class="ts-text is-description" i18n>No Partitions
+                                            // 無分割區
+                                          </div>`;
+                    }
+                   
+                    let warningClass = "";
+                    let warningMessage = `<div class="ts-text is-negative" i18n> 
+                                            This disk is mounted and might be in use.
+                                            // 此磁碟已被掛載，可能正在使用中。
+                                        </div>`;
+                    if (diskIsMounted) {
+                        warningClass = "is-negative is-start-indicated";
+                    }
+
+                    let disabledClass = "";
+                    if (diskIsAlreadyRAID) {
+                        disabledClass = "is-disabled";
+                    } 
+
+                    // Append disk information with partition table
+                    diskList.append(`<div class="ts-box ts-content has-top-spaced-small new-raid-disk-info ${warningClass} ${disabledClass}" data-disk-info='${encodedDiskInfo}'>
+                                        ${diskIsMounted ? warningMessage : ""}
+                                        <div class="ts-item">
+                                            <div class="ts-header">${disk.model} <span class="ts-badge has-start-spaced-small">${humanFileSize(disk.size)}</span></div>
+                                            <div class="ts-text is-description">
+                                                /dev/${disk.name}
+                                            </div>
+                                        </div>
+                                        <div class="has-top-spaced-small">
+                                            ${partitionTable}
+                                        </div>
+                                        <div class="new_raid_disk_selected">
+                                            <span class="ts-icon is-circle-check-icon" style="color: var(--ts-positive-400); font-size: 1.5rem;"></span>
+                                        </div>
+                                    </div>`);
+                }
+            } else {
+                console.error("Failed to load disk info: " + data.message);
+            }
+
+            //Bind click event to each disk info
+            $(".new-raid-disk-info").off("click").on("click", function() {
+                var selectedDisk = $(this);
+                var selectedIcon = selectedDisk.find(".new_raid_disk_selected");
+                var isSelected = $(this).hasClass("selected");
+                if (isSelected) {
+                    selectedDisk.removeClass("selected");
+                    selectedIcon.hide();
+                } else {
+                    selectedDisk.addClass("selected");
+                    selectedIcon.show();
+                }
+
+                // Check if any disk is selected
+                if ($(".new-raid-disk-info.selected").length > 0) {
+                    // Mark step 2 as completed and step 3 as active
+                    $("a[step='2']").removeClass("is-active").addClass("is-completed");
+                    $("a[step='3']").addClass("is-active");
+                } else {
+                    // Restore the not complete state of the steps
+                    $("a[step='2']").removeClass("is-completed").addClass("is-active");
+                    $("a[step='3']").removeClass("is-active");
+                }
+
+                //Render the space estimation if any disk is selected
+                renderNewRaidSpaceEstimation();
+            });
+            relocale();
+        });
+    }
+    initNewRAIDDiskList();
+
+    /* RAID type selection */
+    $(".raid_type").click(function() {
+        var raid_type = $(this).text();
+        var raid_type_value = $(this).val();
+        $(".raid_type_selected").text(raid_type);
+        $(".raid_type_selected").val(raid_type_value);
+        $("#new_raid_type_select").removeClass("is-active");
+        $("#new_raid_type_select").removeAttr("data-dropdown");
+        $("#new_raid_type_select").attr("data-dropdown", "new_raid_type_select");
+        $(".raid_type").removeClass("is-active");
+        $(this).addClass("is-active");
+        $(".raid_type").removeAttr("aria-pressed");
+        $(this).attr("aria-pressed", "true");
+        $(".raid_type").removeAttr("aria-selected");
+        $(this).attr("aria-selected", "true");
+        $(".raid_type").removeAttr("aria-expanded");
+        $(this).attr("aria-expanded", "true");
+        $(".raid_type").removeAttr("aria-hidden");
+        $(this).attr("aria-hidden", "false");
+
+        //Write the selected type to attribute
+        var selectedRAIDType = $(this).val();
+        $(".raid_type_selected").attr("value", selectedRAIDType);
+
+        // Mark step 3 as completed and step 2 as active
+        $("a[step='3']").removeClass("is-active").addClass("is-completed");
+        $("a[step='2']").addClass("is-active");
+
+        renderNewRaidSpaceEstimation();
+    });
+
+    function getCurrentSelectedDisks(){
+        var selectedDisks = [];
+        $(".new-raid-disk-info.selected").each(function() {
+            var diskInfo = $(this).attr("data-disk-info");
+            var disk = JSON.parse(decodeURIComponent(diskInfo));
+            selectedDisks.push(disk);
+        });
+        return selectedDisks;
+    }
+
+    function getCurrentSelectedRAIDType(){
+        var selectedRAIDType = $(".raid_type_selected").val();
+        if (selectedRAIDType == undefined || selectedRAIDType == "") {
+            selectedRAIDType = "";
+        }
+        return selectedRAIDType;
+    }
+
+
+    /* Render the space estimation */
+    function renderNewRaidSpaceEstimation(){
+        function bytesToHumanReadable(size){
+            var i = size == 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024));
+            return +((size / Math.pow(1024, i)).toFixed(1)) * 1 + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
+        }
+        //Check if any disk is selected and raid type is selected
+        let selectedDisks = getCurrentSelectedDisks();
+        let selectedRAIDType = getCurrentSelectedRAIDType();
+        if (selectedDisks.length == 0 || selectedRAIDType == "") {
+            $("#capacityVisualizer").hide();
+            $("3capacityVisualizerInformationSlate").show();
+            return;
+        } else {
+            $("#capacityVisualizer").show();
+            $("#capacityVisualizerInformationSlate").hide();
+        }
+        
+        console.log(selectedDisks, selectedRAIDType);
+
+        //Calculate the total size of selected disks
+        let totalSize = 0;
+        let totalUsableSpace = 0;
+        let totalRedundancySpace = 0;
+        let totalWastedSpace = 0;
+        let totalDiskCount = selectedDisks.length;
+        let diskCountIsEnough = false;
+        if (selectedRAIDType == "raid0"){
+            // RAID 0: No redundancy, all space is usable
+            // Usable space is determined by the smallest disk size * the number of disks
+            let smallestDiskSize = 0;
+            selectedDisks.forEach(disk => {
+                totalSize += disk.size;
+                if (smallestDiskSize == 0 || disk.size < smallestDiskSize) {
+                    smallestDiskSize = disk.size;
+                }
+            });
+
+            totalUsableSpace = smallestDiskSize * totalDiskCount;
+            totalRedundancySpace = 0;
+            totalWastedSpace = totalSize - totalUsableSpace;
+            if (totalDiskCount >= 2){
+                diskCountIsEnough = true;
+            }
+        }else if (selectedRAIDType == "raid1"){
+            // RAID 1: Mirroring, usable space is the size of the smallest disk
+            let smallestDiskSize = 0;
+            selectedDisks.forEach(disk => {
+                totalSize += disk.size;
+                if (smallestDiskSize == 0 || disk.size < smallestDiskSize) {
+                    smallestDiskSize = disk.size;
+                }
+            });
+
+            totalUsableSpace = smallestDiskSize;
+            totalRedundancySpace = smallestDiskSize * (totalDiskCount - 1);
+            totalWastedSpace = totalSize - totalUsableSpace;
+
+            if (totalDiskCount >= 2){
+                diskCountIsEnough = true;
+            }
+        }else if (selectedRAIDType == "raid5"){
+            // RAID 5: Striping with parity, usable space is total size - size of one disk
+            let smallestDiskSize = 0;
+            selectedDisks.forEach(disk => {
+                totalSize += disk.size;
+                if (smallestDiskSize == 0 || disk.size < smallestDiskSize) {
+                    smallestDiskSize = disk.size;
+                }
+            });
+
+            totalUsableSpace = smallestDiskSize * (totalDiskCount - 1);
+            totalRedundancySpace = smallestDiskSize;
+            totalWastedSpace = totalSize - totalUsableSpace - totalRedundancySpace;
+            if (totalDiskCount >= 3){
+                diskCountIsEnough = true;
+            }
+        }else if (selectedRAIDType == "raid6"){
+            // RAID 6: Striping with double parity, usable space is total size - size of two disks
+            let smallestDiskSize = 0;
+            selectedDisks.forEach(disk => {
+                totalSize += disk.size;
+                if (smallestDiskSize == 0 || disk.size < smallestDiskSize) {
+                    smallestDiskSize = disk.size;
+                }
+            });
+
+            totalUsableSpace = smallestDiskSize * (totalDiskCount - 2);
+            totalRedundancySpace = smallestDiskSize * 2;
+            totalWastedSpace = totalSize - totalUsableSpace - totalRedundancySpace;
+            if (totalDiskCount >= 4){
+                diskCountIsEnough = true;
+            }
+        }else{
+            console.error("Unknown RAID type: " + selectedRAIDType);
+            return;
+        }
+
+        //Check if the disk count is enough for the selected RAID type
+        if (!diskCountIsEnough){
+            $("#capacityVisualizer").hide();
+            $("3capacityVisualizerInformationSlate").show();
+            $("a[step='3']").removeClass("is-completed").addClass("is-active");
+            $("a[step='4']").removeClass("is-active");
+            return;
+        }
+        //Update the visualizer
+        let barMinWidth = 100;
+        let usableSpacePercentage = (totalUsableSpace / totalSize) * 100;
+        let redundancySpacePercentage = (totalRedundancySpace / totalSize) * 100;
+        let wastedSpacePercentage = (totalWastedSpace / totalSize) * 100;
+        $("#estimatedUsableSpace").text(bytesToHumanReadable(totalUsableSpace));
+        $("#estimatedProtectionSpace").text(bytesToHumanReadable(totalRedundancySpace));
+        $("#estimatedWastedSpace").text(bytesToHumanReadable(totalWastedSpace));
+        $("#estimatedUsableSpace").css("width", usableSpacePercentage + "%");
+        if (usableSpacePercentage == 0){
+            $("#estimatedUsableSpace").css("min-width", "0");
+        }else{
+            $("#estimatedUsableSpace").css("min-width", barMinWidth + "px");
+        }
+        $("#estimatedProtectionSpace").css("width", redundancySpacePercentage + "%");
+        if (redundancySpacePercentage == 0 ){
+            $("#estimatedProtectionSpace").css("min-width", "0");
+        }else{
+            $("#estimatedProtectionSpace").css("min-width", barMinWidth + "px");
+        }
+        $("#estimatedWastedSpace").css("width", wastedSpacePercentage + "%");
+
+    }
+</script>

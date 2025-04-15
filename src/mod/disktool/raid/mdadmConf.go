@@ -1,6 +1,7 @@
 package raid
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -32,21 +33,9 @@ func (m *Manager) FlushReload() error {
 
 	//Stop all of the running RAID devices
 	for _, rd := range raidDevices {
-
-		//Check if it is mounted. If yes, skip this
-		devMounted, err := diskfs.DeviceIsMounted("/dev/" + rd.Name)
-		if devMounted || err != nil {
-			log.Println("[RAID] " + "/dev/" + rd.Name + " is in use. Skipping.")
-			continue
-		}
-		log.Println("[RAID] Stopping " + rd.Name)
-
-		cmdMdadm := exec.Command("sudo", "mdadm", "--stop", "/dev/"+rd.Name)
-
-		// Run the command and capture its output
-		_, err = cmdMdadm.Output()
+		err = m.FlushReloadDev(&rd)
 		if err != nil {
-			log.Println("[RAID] Unable to stop " + rd.Name + ". Skipping")
+			log.Println("[RAID] Unable to stop " + rd.Name + ": " + err.Error())
 			continue
 		}
 	}
@@ -59,6 +48,24 @@ func (m *Manager) FlushReload() error {
 		return err
 	}
 
+	return nil
+}
+
+// FlushReloadDev stop a single RAID device and remove it from mdadm config
+func (m *Manager) FlushReloadDev(targetDev *RAIDDevice) error {
+	//Check if it is mounted. If yes, skip this
+	devMounted, err := diskfs.DeviceIsMounted("/dev/" + targetDev.Name)
+	if devMounted || err != nil {
+		return errors.New("device is in use")
+	}
+
+	cmdMdadm := exec.Command("sudo", "mdadm", "--stop", "/dev/"+targetDev.Name)
+
+	// Run the command and capture its output
+	_, err = cmdMdadm.Output()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

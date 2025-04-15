@@ -149,6 +149,11 @@ func (m *Manager) HandleAddDiskToRAIDVol(w http.ResponseWriter, r *http.Request)
 
 // Handle force flush reloading mdadm to solve the md0 become md127 problem
 func (m *Manager) HandleMdadmFlushReload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		//This force the request to pass through the csrf check
+		utils.SendErrorResponse(w, "invalid method")
+		return
+	}
 	err := m.FlushReload()
 	if err != nil {
 		utils.SendErrorResponse(w, "reload failed: "+strings.ReplaceAll(err.Error(), "\n", " "))

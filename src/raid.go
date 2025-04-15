@@ -1,8 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
+
+	"imuslab.com/bokofs/bokofsd/mod/diskinfo/blkstat"
+	"imuslab.com/bokofs/bokofsd/mod/utils"
 )
 
 /*
@@ -35,6 +39,27 @@ func HandleRAIDCalls() http.Handler {
 		case "start-resync":
 			// Activate a RAID device, require "dev=md0" as a query parameter
 			raidManager.HandleSyncPendingToReadWrite(w, r)
+			return
+		case "reassemble":
+			// Reassemble all RAID devices
+			raidManager.HandleForceAssembleReload(w, r)
+			return
+
+		case "test":
+			devname, err := utils.GetPara(r, "dev")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			bs, err := blkstat.GetInstalledBus(devname)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			js, _ := json.Marshal(bs)
+			utils.SendJSONResponse(w, string(js))
 			return
 		default:
 			http.Error(w, "Not Found", http.StatusNotFound)
