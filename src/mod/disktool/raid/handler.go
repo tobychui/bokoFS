@@ -476,7 +476,6 @@ func (m *Manager) HandleRaidDevicesAssemble(w http.ResponseWriter, r *http.Reque
 
 // Remove a given raid device with its name, USE WITH CAUTION
 func (m *Manager) HandleRemoveRaideDevice(w http.ResponseWriter, r *http.Request) {
-	//TODO: Add protection and switch to POST
 	targetDevice, err := utils.PostPara(r, "raidDev")
 	if err != nil {
 		utils.SendErrorResponse(w, "target device not given")

@@ -49,13 +49,13 @@
                 </div>
                 <div class="ts-divider has-top-spaced-small"></div>
                 <div class="ts-content is-center-aligned">
-                    <button class="ts-button is-start-icon is-positive is-circular">
+                    <button onclick="showCreateNewRAIDArray();" class="ts-button is-start-icon is-positive is-circular">
                         <span class="ts-icon is-circle-plus-icon" style="color: var(--ts-positive-500);"></span>
                         <span i18n>Create RAID
                         // 新增陣列
                         </span>
                     </button>
-                    <button onclick="showForceAssembleWarning();" class="ts-button is-start-icon is-positive is-circular">
+                    <button onclick="showForceAssembleWarning();" class="ts-button is-start-icon has-start-spaced-small is-positive is-circular">
                         <span class="ts-icon is-rotate-icon" style="color: var(--ts-primary-500);"></span>
                         <span i18n>Assemble
                         // 重組陣列
@@ -70,9 +70,8 @@
             </div>
         </div>
     </div>
-    <style>
-        
-    </style>
+
+    <!-- RAID Assemble Warning Dialog -->
     <dialog id="raid_assemble_warning" class="ts-modal">
         <div class="content">
             <div class="ts-content">
@@ -101,14 +100,48 @@
             </div>
         </div>
     </dialog>
-    <dialog id="raid_new" class="ts-modal is-big mobile:is-fullscreen" open>
 
+    <!-- RAID Device Remove Warning -->
+    <dialog id="raid_remove_warning" class="ts-modal">
+        <div class="content">
+            <div class="ts-content">
+                <div class="ts-header" i18n>Confirm delete RAID device?
+                    // 確認刪除 RAID 裝置？
+                </div>
+            </div>
+            <div class="ts-divider"></div>
+            <div class="ts-content">
+                <div class="ts-text is-description">
+                    <span i18n> This will delete the RAID device and all data on it. 
+                        // 這將刪除 RAID 裝置及其上的所有資料。
+                    </span>
+                </div>
+            </div>
+            <div class="ts-divider"></div>
+            <div class="ts-content is-tertiary">
+                <div class="ts-wrap is-end-aligned">
+                    <button class="ts-button is-negative" onclick="deleteRAIDArray();" i18n>Confirm
+                        // 確認
+                    </button>
+                    <button class="ts-button" onclick="cancelRAIDDelete();" i18n>Cancel
+                        // 取消
+                    </button>
+                </div>
+            </div>
+        </div>
     </dialog>
+
+    <!-- RAID Creation Dialog -->
+    <dialog id="raid_new" class="ts-modal is-big mobile:is-fullscreen"></dialog>
+
 </div>
 <script>
+    // Load the RAID creation dialog
     $("#raid_new").load("./components/raid_new.html", function(){
         
     });
+
+    // Load existing RAID devices
     function initRAIDDeviceList(){
         $.ajax({
             url: './api/raid/list',
@@ -116,6 +149,7 @@
             dataType: 'json',
             success: function(data) {
                 $('#raid_array_list').html("");
+                $("#raid_details").html("");
                 if (data.error != undefined){
                     // Handle error response
                     console.error('Error fetching RAID devices:', data.error);
@@ -209,36 +243,6 @@
                 console.error('Error updating RAID status:', error);
             }
         });
-    }
-
-    function deleteRAIDArray(devname){
-        if (devname.startsWith('/dev/')) {
-            devname = devname.slice(5);
-        }
-
-        /*
-        //TODO: API still not ready
-        $.cjax({
-            url: './api/raid/delete',
-            method: 'POST',
-            data: { dev: devname},
-            success: function(data) {
-                if (data.error != undefined){
-                    // Handle error response
-                    console.error('Error deleting RAID device:', data.error);
-                    msgbox("Error: " + data.error);
-                }else{
-                    // Successfully deleted the device
-                    console.log('RAID device deleted successfully:', data);
-                    msgbox(i18nc("raid_device_deleted_succ"));
-                    setTimeout(function() {
-                        // Refresh the RAID device list after a short delay
-                        initRAIDDeviceList();
-                    }, 300);
-                }
-            },
-        });
-        */
     }
 
     // Utility function to convert bytes to human-readable format
@@ -417,13 +421,15 @@
                     <div class="has-top-spaced-small">
                         <div class="ts-box">
                             <div class="ts-content">
+                                <!-- 
                                 <button class="ts-button is-start-icon is-positive is-circular" onclick="" >
                                     <span class="ts-icon is-rotate-icon" style="color: var(--ts-primary-500);"></span>
                                     <span i18n> Assemble
                                         // 重組陣列
                                     </span>
                                 </button>
-                                <button class="ts-button is-circular is-start-icon is-negative"> 
+                                -->
+                                <button onclick="showDeleteRAIDWarning('${raid.DevicePath}');" class="ts-button is-circular is-start-icon is-negative"> 
                                     <span class="ts-icon is-trash-icon"></span>
                                     <span i18n> Delete RAID
                                         // 刪除陣列
@@ -531,8 +537,7 @@
                     }
                 });
             }
-            result += `
-            <div class="ts-box is-padded has-bottom-spaced-small raid-child-disk" diskid="${elementUUID}">
+            result += `<div class="ts-box is-padded has-bottom-spaced-small raid-child-disk" diskid="${elementUUID}">
                 <div class="ts-content">
                     <div>
                         <span class="ts-badge is-secondary has-end-spaced-small" style="margin-top: -0.3em;">${disk.DevicePath}</span>
@@ -546,8 +551,7 @@
                     </div>
                     </div>
                 </div>
-            </div>
-            `;
+            </div>`;
         }
         return result;
     }
@@ -659,6 +663,115 @@
     function confirmApplyReassemble(){
         $('#raid_assemble_warning')[0].close();
         AssembleAllRAID();
+    }
+
+    /* Delete RAID */
+    function showDeleteRAIDWarning(devname){
+        $('#raid_remove_warning')[0].showModal();
+        $('#raid_remove_warning').attr("devname", devname);
+    }
+
+    function deleteRAIDArray(devname=undefined){
+        if (devname == undefined){
+            // Get the device name from the dialog
+            devname = $('#raid_remove_warning').attr("devname");
+        }
+        if (!devname.startsWith('/dev/')) {
+            devname = '/dev/' + devname;
+        }
+        $('#raid_remove_warning')[0].close();
+        $.cjax({
+            url: './api/raid/delete',
+            method: 'POST',
+            data: { "raidDev": devname},
+            success: function(data) {
+                if (data.error != undefined){
+                    // Handle error response
+                    console.error('Error deleting RAID device:', data.error);
+                    msgbox("Error: " + data.error);
+                }else{
+                    // Successfully deleted the device
+                    console.log('RAID device deleted successfully:', data);
+                    msgbox(i18nc("raid_device_deleted_succ"));
+                    setTimeout(function() {
+                        // Refresh the RAID device list after a short delay
+                        initRAIDDeviceList();
+                    }, 300);
+                }
+            },
+        });
+        
+    }
+
+    function cancelRAIDDelete(){
+        $('#raid_remove_warning')[0].close();
+    }
+
+    /* Create RAID */
+    function showCreateNewRAIDArray(){
+        $('#raid_new')[0].showModal();
+        resetNewRAIDUserInputs();
+    }
+
+    function closeCreateNewRAIDArray(){
+        $('#raid_new')[0].close();
+    }
+
+    /*
+        Require raid_new.html, return e.g.
+        {
+            disks: selectedDisks,
+            type: selectedRAIDType,
+            name: raidName
+        }
+    */
+    function createNewRAIDArray(formatSuperBlock=true){
+        let newArrayconfig = getNewRAIDArraySelection();
+        let diskNames = [];
+        let arrayName = newArrayconfig.name;
+        let raidType = newArrayconfig.type;
+        newArrayconfig.disks.forEach((disk) => {
+            diskNames.push("/dev/" + disk.name);
+        });
+        console.log(diskNames, raidType, arrayName, formatSuperBlock);
+        
+        //Make a request to create the new RAID array
+        $.cjax({
+            url: './api/raid/create',
+            method: 'POST',
+            data: { 
+                "raidName": arrayName,
+                "level": raidType,
+                "raidDev": JSON.stringify(diskNames),
+                "spareDev":JSON.stringify([]),
+                "zerosuperblock": formatSuperBlock
+            },
+            success: function(data) {
+                if (data.error != undefined){
+                    // Handle error response
+                    console.error('Error creating RAID device:', data.error);
+                    msgbox("Error: " + data.error);
+                }else{
+                    // Successfully created the device
+                    console.log('RAID device created successfully:', data);
+                    msgbox(i18nc("raid_device_created_succ"));
+                    setTimeout(function() {
+                        // Refresh the RAID device list after a short delay
+                        initRAIDDeviceList();
+                        $('#raid_new')[0].close();
+
+                        // Reset the RAID creation dialog inputs
+                        resetNewRAIDUserInputs();
+                        hideConfirmNewRaidDialog();
+                        
+                    }, 300);
+                }
+            },
+        });
+    }
+
+    function cancelCreateNewRAIDArray(){
+        $('#raid_new')[0].close();
     }
 </script>
 

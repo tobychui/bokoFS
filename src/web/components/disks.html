@@ -34,6 +34,11 @@
     });
 
     function loadDiskInfo(){
+        $("#disk-list").html(`
+            <div class="ts-blankslate">
+                <div class="header"><span class="ts-icon is-spinning is-spinner-icon"></span></div>
+            </div>
+        `);
         $.get("./api/info/list", function(data){
             if (data) {
                 var disks = data;

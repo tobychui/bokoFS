@@ -150,7 +150,13 @@
                     <button class="item raid_type" value="raid5">RAID 5 </button>
                     <button class="item raid_type" value="raid0">RAID 0</button>
                 </div>
-
+                <!-- Not enough disks warning -->
+                <div id="notEnoughDisksWarning" class="ts-blankslate is-negative" style="display: none;">
+                    <div class="description" i18n>
+                        Not enough disks selected for the chosen RAID type. Please select more disks to proceed.
+                        // 選擇的磁碟不足以建立所選的 RAID 類型。請選擇更多磁碟以繼續。
+                    </div>
+                </div>
                 <!-- Space Estimation -->
                 <div class="ts-divider has-top-spaced-small has-bottom-spaced-small"></div>
                 <div class="ts-text" i18n>Usable Space
@@ -192,15 +198,42 @@
 <div class="ts-divider"></div>
 <div class="ts-content is-tertiary">
     <div class="ts-wrap is-end-aligned">
-        <button class="ts-button" i18n>Confirm
+        <button onclick="showConfirmNewRaidDialog();" class="ts-button" i18n>Confirm
             // 確認
         </button>
-        <button class="ts-button is-outlined" i18n>Cancel
+        <button onclick="cancelCreateNewRAIDArray(); //parent function" class="ts-button is-outlined" i18n>Cancel
             // 取消
         </button>
     </div>
 </div>
-
+<dialog id="new_raid_warning" class="ts-modal" style="background: rgba(0, 0, 0, 0.9);">
+    <div class="ts-content">
+        <div class="ts-header" i18n>Warning
+            // 警告
+        </div>
+        <div class="ts-text is-description" i18n>
+            Creating a new RAID array will format all selected disks and erase all data on them. This action cannot be undone. Are you sure you want to proceed?
+            // 建立新的 RAID 陣列將格式化所有選定的磁碟並清除其上的所有資料。此操作無法撤銷。您確定要繼續嗎？
+        </div>
+        <div class="ts-text is-description has-top-spaced-small">
+            <strong i18n>Selected Disks:
+                // 選定的磁碟：
+            </strong>
+            <span id="selected_disks_list"></span>
+        </div>
+        <div class="ts-wrap is-end-aligned has-top-spaced-large">
+            <button class="ts-button is-negative" onclick="createNewRAIDArray(true);" i18n>Proceed
+                // 繼續
+            </button>
+            <button class="ts-button is-negative is-outlined" onclick="createNewRAIDArray(false);" i18n>Proceed w/o superblock format
+                // 不格式化 superblock 繼續
+            </button>
+            <button class="ts-button is-outlined" onclick="document.getElementById('new_raid_warning').close();" i18n>Cancel
+                // 取消
+            </button>
+        </div>
+    </div>
+</dialog>
 <script>
 
     /* RAID name validation */
@@ -465,8 +498,7 @@
 
             totalUsableSpace = smallestDiskSize;
             totalRedundancySpace = smallestDiskSize * (totalDiskCount - 1);
-            totalWastedSpace = totalSize - totalUsableSpace;
-
+            totalWastedSpace = totalSize - totalUsableSpace - totalRedundancySpace;
             if (totalDiskCount >= 2){
                 diskCountIsEnough = true;
             }
@@ -513,7 +545,14 @@
             $("3capacityVisualizerInformationSlate").show();
             $("a[step='3']").removeClass("is-completed").addClass("is-active");
             $("a[step='4']").removeClass("is-active");
+            $("button[onclick='showConfirmNewRaidDialog();']").prop("disabled", true);
+            $("#notEnoughDisksWarning").show();
             return;
+        }else{
+            $("a[step='3']").removeClass("is-active").addClass("is-completed");
+            $("a[step='4']").addClass("is-active");
+            $("button[onclick='showConfirmNewRaidDialog();']").prop("disabled", false);
+            $("#notEnoughDisksWarning").hide();
         }
         //Update the visualizer
         let barMinWidth = 100;
@@ -537,5 +576,74 @@
         }
         $("#estimatedWastedSpace").css("width", wastedSpacePercentage + "%");
 
+    }
+
+    /* Reset Selections */
+    function resetNewRAIDUserInputs(){
+        // Reset RAID name
+        $("#raid_name").val("");
+        $("#raid_name").parent().removeClass("is-end-icon");
+        $("a[step='1']").removeClass("is-completed").removeClass("is-active");
+        $("a[step='2']").removeClass("is-active");
+        $(".ts-icon.raid_name_valid_icon").hide();
+
+        // Reset disk selection
+        $(".new-raid-disk-info").removeClass("selected");
+        $(".new_raid_disk_selected").hide();
+        $("a[step='2']").removeClass("is-completed").addClass("is-active");
+        $("a[step='3']").removeClass("is-active");
+
+        // Reset RAID type
+        $(".raid_type_selected").text("Select RAID Type");
+        $(".raid_type_selected").val("");
+        $("#new_raid_type_select .item").removeClass("is-active");
+        $("a[step='3']").removeClass("is-completed").addClass("is-active");
+
+        // Reset space estimation
+        $("#capacityVisualizer").hide();
+        $("#capacityVisualizerInformationSlate").show();
+        $("#estimatedUsableSpace").text("0%");
+        $("#estimatedProtectionSpace").text("0%");
+        $("#estimatedWastedSpace").text("0%");
+        $("#estimatedUsableSpace").css("width", "0%");
+        $("#estimatedProtectionSpace").css("width", "0%");
+        $("#estimatedWastedSpace").css("width", "0%");
+    }
+
+    /* Get the selection for new RAID arrays */
+    function getNewRAIDArraySelection(){
+        let selectedDisks = getCurrentSelectedDisks();
+        let selectedRAIDType = getCurrentSelectedRAIDType();
+        let raidName = $("#raid_name").val().trim();
+        return {
+            disks: selectedDisks,
+            type: selectedRAIDType,
+            name: raidName
+        };
+    }
+
+    function showConfirmNewRaidDialog(){
+        let selectedDisks = getCurrentSelectedDisks();
+        let selectedRAIDType = getCurrentSelectedRAIDType();
+        let raidName = $("#raid_name").val().trim();
+
+        //Check if the raid name is valid
+        if (raidName == "" || !/^[a-zA-Z0-9_-]+$/.test(raidName)){
+            $("#raid_name").parent().addClass("is-negative");
+            $(".new-raid-modal-content").animate({
+                scrollTop: $("#raid_name").offset().top - $(".new-raid-modal-content").offset().top
+            }, "smooth");
+            return;
+        }
+        let selectedDisksList = "";
+        selectedDisks.forEach(disk => {
+            selectedDisksList += "/dev/" + disk.name + " ";
+        });
+        $("#selected_disks_list").text(selectedDisksList);
+        $("#new_raid_warning")[0].showModal();
+    }
+
+    function hideConfirmNewRaidDialog(){
+        $("#new_raid_warning")[0].close();
     }
 </script>

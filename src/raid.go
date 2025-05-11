@@ -28,6 +28,11 @@ func HandleRAIDCalls() http.Handler {
 			// Handle loading the detail of a given RAID array, require "dev=md0" as a query parameter
 			raidManager.HandleLoadArrayDetail(w, r)
 			return
+		case "create":
+			// Create a new RAID device, devName (Optional, e.g. md0), raidName (e.g. myraid), level (e.g. 0),
+			// raidDev(e.g. sda,sdb), spareDev(e.g. sdc), zerosuperblock(bool)
+			raidManager.HandleCreateRAIDDevice(w, r)
+			return
 		case "overview":
 			// Render the RAID overview page
 			raidManager.HandleRenderOverview(w, r)
@@ -44,8 +49,16 @@ func HandleRAIDCalls() http.Handler {
 			// Reassemble all RAID devices
 			raidManager.HandleForceAssembleReload(w, r)
 			return
-
+		case "delete":
+			// Delete a RAID device, require "raidDev=md0" as a query parameter
+			raidManager.HandleRemoveRaideDevice(w, r)
+			return
+		case "add":
+			// Add a new disk to the RAID device, require "dev=md0" as a query parameter
+			raidManager.HandleAddDiskToRAIDVol(w, r)
+			return
 		case "test":
+			//DEBUG Code
 			devname, err := utils.GetPara(r, "dev")
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)

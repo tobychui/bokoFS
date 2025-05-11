@@ -61,11 +61,19 @@ let translatedMessages = {
         "raid_resync_started_succ": 'RAID resync started',
         "raid_device_updated_succ": 'RAID device status reloaded',
         "raid_reassemble_started_succ": 'RAID config reloaded',
+        "raid_device_deleted_succ": 'RAID device deleted',
+        "raid_device_deleted_fail": 'RAID device delete failed',
+        "raid_device_created_succ": 'RAID device created',
+        "raid_device_created_fail": 'RAID device create failed',
     },
     'zh': {
         'disk_info_refreshed': '磁碟資訊已重新載入',
         "raid_resync_started_succ": 'RAID 重建已成功啟動',
         "raid_device_updated_succ": 'RAID 裝置狀態已重新載入',
         "raid_reassemble_started_succ": 'RAID 配置已重新載入',
+        "raid_device_deleted_succ": 'RAID 裝置已刪除',
+        "raid_device_deleted_fail": 'RAID 裝置刪除失敗',
+        "raid_device_created_succ": 'RAID 裝置已建立',
+        "raid_device_created_fail": 'RAID 裝置建立失敗',
     }
 };
